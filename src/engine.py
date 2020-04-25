@@ -2,7 +2,8 @@ import torch.nn as nn
 import torch
 import numpy as np
 import string
-from utils import jaccard
+from utils import jaccard, AverageMeter
+from tqdm import tqdm
 
 def loss_fn(o1, o2, t1, t2):
     l1 = nn.BCEWithLogitsLoss()(o1, t1)
@@ -11,8 +12,10 @@ def loss_fn(o1, o2, t1, t2):
 
 def trn_loop_fn(data_loader, model, optimzer, device):
     model.train()
-    loss = 0
-    for bi, d in enumerate(data_loader):
+    losses = AverageMeter()
+    tk = tqdm(data_loader, total=len(data_loader))
+
+    for bi, d in enumerate(tk):
         ids = d['ids']
         mask_id = d['mask_id']
         token_type_id = d['token_type_id']
@@ -30,10 +33,11 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         loss = loss_fn(o1, o2, targets_start, targets_end)
         loss.backward()
         optimzer.step()      
+        losses.update(loss.item(), ids.size(0))
+        tk.set_postfix(loss=losses.avg)
 
 def eval_loop_fn(data_loader, model, device):
     model.eval()
-    loss = 0
     fin_output_start = []
     fin_output_end = []
     fin_orig_sentiment = []
