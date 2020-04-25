@@ -13,14 +13,11 @@ class TweetDataset():
         self.max_len = max_len
 
     def __len__(self):
-        return lem(self.sentiment)
-
+        return len(self.sentiment)
 
     def __getitem__(self, item):
         text = str(self.text[item])
         selected_text = str(self.selected_text[item])
-        
-
         len_sel_text = len(selected_text)
 
 
@@ -38,13 +35,15 @@ class TweetDataset():
             else:
                 char_target[j] = 1
 
-        
+        #tok_ids : token_id, ex:101, 1045
+        #tok_token : token, ex:'[CLS]', 'i',
+        #tok_offset : (0, 0), (1, 2)
         tok_outputs = self.tokenizer.encode(text)
         tok_ids = tok_outputs.ids
-        tok_tokens = tok_outputs.tokens
+        text_token = tok_outputs.tokens
         tok_offset =  tok_outputs.offsets[1:-1]
 
-        targets = [0] * (len(tok_tokens)-2) 
+        targets = [0] * (len(text_token)-2) 
         for j, (offset1, offset2) in enumerate(tok_offset):
             if sum(char_target[offset1:offset2]) > 1:
                 targets[j] =1
@@ -54,9 +53,9 @@ class TweetDataset():
         targets_end = [0] * len(targets)
 
         non_zero = np.nonzero(targets)[0]
-        if len(np.nonzero(targets)) > 0:
+        if len(non_zero) > 0:
             targets_start[non_zero[0]] = 1
-            targets_start[non_zero[-1]] = 1
+            targets_end[non_zero[-1]] = 1
 
         mask = [1] * len(tok_ids)
         token_type_id = [0] * len(tok_ids)
@@ -76,21 +75,25 @@ class TweetDataset():
         else:
             sentiment = [0,1,0]
 
-        print(tok_tokens)
+        
         return {
-            "token_id" : torch.tensor(tok_ids, dtype=torch.long),
+            "ids" : torch.tensor(tok_ids, dtype=torch.long),
             "mask_id" : torch.tensor(mask, dtype=torch.long),
             "token_type_id" : torch.tensor(token_type_id, dtype=torch.long),
             "targets" : torch.tensor(targets, dtype=torch.long),
             "targets_start" : torch.tensor(targets_start, dtype=torch.long),
             "targets_end" : torch.tensor(targets_end, dtype=torch.long),
             "padding_len" : padding_len,
+            "text_token" : " ".join(text_token),
             "sentiment" : torch.tensor(sentiment, dtype=torch.float),
             "origin_sentiment" : self.sentiment[item],
-            "text_token" : " ".join(tok_tokens)
+            "origin_text" : self.text[item],
+            "origin_selected_text" : self.selected_text[item]
         }
         
 if __name__ == "__main__":
     df = pd.read_csv(TRAIN_FILE)
     dataset = TweetDataset(df['text'], df['selected_text'], df['sentiment'], TOKENIZER, MAX_LEN)
-    print(dataset[0])
+    #print(dataset[0])
+    #print(dataset[1]['targets_start'].size())
+    #print(dataset[1]['targets_end'].size())
