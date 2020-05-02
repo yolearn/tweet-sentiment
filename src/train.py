@@ -9,7 +9,7 @@ from transformers import AdamW
 from config import *
 
 def run():
-    df = pd.read_csv(TRAIN_FILE, nrows=100)
+    df = pd.read_csv(TRAIN_FILE)
     df['sentiment'] = df['sentiment'].apply(
                         lambda x : 1 if x=='positive' else 0
     )
@@ -56,7 +56,7 @@ def run():
         cur_score = eval_loop_fn(val_data_loader, model, DEVICE)
         print(f"{i+1} EPOCH : JACCARDS = {cur_score}")
         if cur_score > best_score:
-            torch.save(mode.state_dict(), MODEL_PATH)
+            torch.save(model.state_dict(), MODEL_PATH)
             best_score = cur_score
             
 if __name__ == '__main__':

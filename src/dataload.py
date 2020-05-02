@@ -16,10 +16,9 @@ class TweetDataset():
         return len(self.sentiment)
 
     def __getitem__(self, item):
-        text = str(self.text[item])
-        selected_text = str(self.selected_text[item])
+        text = " ".join(str(self.text[item]).split())
+        selected_text = " ".join(str(self.selected_text[item]).split())
         len_sel_text = len(selected_text)
-
 
         for ind in (i for i, e in enumerate(text) if e == selected_text[0]):
             if text[ind:ind+len_sel_text] == selected_text:

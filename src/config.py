@@ -4,11 +4,11 @@ import pandas as pd
 import torch
 
 TRAIN_FILE = "../input/train.csv"
-MAX_LEN = 100
+MAX_LEN = 128
 BATCH_SIZE = 32
 EPOCH = 5 
 LR = 3e-5
-MODEL_PATH = '../model/'
+MODEL_PATH = '../model/model.pth'
 
 BERT_PATH = 'bert-base-uncased'
 TOKENIZER = tokenizers.BertWordPieceTokenizer(
