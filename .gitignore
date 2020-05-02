@@ -130,3 +130,7 @@ dmypy.json
 *.csv
 *.txt
 *.cfg
+
+#folder
+model/
+input/
