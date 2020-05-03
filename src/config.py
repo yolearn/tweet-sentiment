@@ -6,8 +6,9 @@ import torch
 TRAIN_FILE = "../input/train.csv"
 MAX_LEN = 128
 BATCH_SIZE = 32
-EPOCH = 5 
-LR = 3e-5
+EPOCH = 100 
+LR = 1e-5
+THRESHOLD = 0.3
 MODEL_PATH = '../model/model.pth'
 
 BERT_PATH = 'bert-base-uncased'

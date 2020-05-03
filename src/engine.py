@@ -79,23 +79,21 @@ def eval_loop_fn(data_loader, model, device):
     fin_output_start = np.vstack(fin_output_start)
     fin_output_end = np.vstack(fin_output_end)
 
-
-    threshold = 0.2
     jac_score = []
 
     for j in range(len(fin_output_start)):
         text_token = fin_text_token[j]
         padding_len = fin_padding_len[j]
-        orig_selected = fin_orig_selected[j]
-        orig_sentiment = fin_orig_sentiment[j]
+        origin_selected = fin_orig_selected[j]
+        origin_sentiment = fin_orig_sentiment[j]
         origin_text = fin_origin_text[j]
-    
+
         if padding_len > 0:
-            mask_start = fin_output_start[j][:-padding_len] >= threshold
-            mask_end = fin_output_end[j][:-padding_len] >= threshold
+            mask_start = fin_output_start[j][:-padding_len] >= THRESHOLD
+            mask_end = fin_output_end[j][:-padding_len] >= THRESHOLD
         else:
-            mask_start = fin_output_start[j] >= threshold
-            mask_end = fin_output_end[j] >= threshold
+            mask_start = fin_output_start[j] >= THRESHOLD
+            mask_end = fin_output_end[j] >= THRESHOLD
 
         mask = [0]*len(mask_start)
         idx_start_l = np.nonzero(mask_start)[0]
@@ -127,11 +125,10 @@ def eval_loop_fn(data_loader, model, device):
                 final_output+=token
 
         final_output = final_output.strip()
-
-        if len(text_token.split()) < 4:
+        if origin_sentiment == 'neutral' or len(text_token.split()) < 4:
             final_output = origin_text
         
-        jac = jaccard(final_output, orig_selected)
+        jac = jaccard(final_output, origin_selected)
         jac_score.append(jac)
 
     return np.mean(jac_score)

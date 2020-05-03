@@ -10,9 +10,10 @@ from config import *
 
 def run():
     df = pd.read_csv(TRAIN_FILE)
-    df['sentiment'] = df['sentiment'].apply(
-                        lambda x : 1 if x=='positive' else 0
-    )
+    #df = df[df['sentiment']!= 'neutral']
+    # df['sentiment'] = df['sentiment'].apply(
+    #                     lambda x : 1 if x=='positive' else 0
+    # )
 
     trn_df, val_df = model_selection.train_test_split(df, 
                             random_state=42, 

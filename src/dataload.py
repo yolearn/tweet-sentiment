@@ -20,12 +20,13 @@ class TweetDataset():
         selected_text = " ".join(str(self.selected_text[item]).split())
         len_sel_text = len(selected_text)
 
+        idx0 = -1
+        idx1 = -1
         for ind in (i for i, e in enumerate(text) if e == selected_text[0]):
             if text[ind:ind+len_sel_text] == selected_text:
                 idx0 = ind    
                 idx1 = ind+len_sel_text -1
                 break
-        
 
         char_target = [0] * len(text)
         for j in range(idx0, idx1+1):
@@ -91,8 +92,25 @@ class TweetDataset():
         }
         
 if __name__ == "__main__":
-    df = pd.read_csv(TRAIN_FILE)
-    dataset = TweetDataset(df['text'], df['selected_text'], df['sentiment'], TOKENIZER, MAX_LEN)
-    #print(dataset[0])
+    trn_df = pd.read_csv(TRAIN_FILE)
+    test_df = pd.read_csv("../input/test.csv")
+    test_df['selected_text'] = 'temp'
+
+    dataset = TweetDataset(trn_df['text'].values, 
+                        trn_df['selected_text'].values, 
+                        trn_df['sentiment'].values, 
+                        TOKENIZER, 
+                        MAX_LEN
+                    )
+
+    dataset = TweetDataset(test_df['text'].values, 
+                    test_df['selected_text'].values, 
+                    test_df['sentiment'].values, 
+                    TOKENIZER, 
+                    MAX_LEN
+                )
+    print(dataset[0])
     #print(dataset[1]['targets_start'].size())
     #print(dataset[1]['targets_end'].size())
+    # for i in range(1000):
+    #     print(dataset[i]['origin_sentiment'])
