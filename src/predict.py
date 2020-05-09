@@ -21,14 +21,16 @@ def predict(df):
             dataset = dataset, 
             batch_size = BATCH_SIZE
         )  
-        
+            
+        model.eval()
         fin_output_start = []
         fin_output_end = []
         fin_orig_sentiment = []
-        fin_padding_len = []
-        fin_text_token = []
+        #fin_padding_len = []
+        #fin_text_token = []
         fin_origin_text = []
         fin_orig_selected = []
+        fin_offset = []
 
         for bi, d in enumerate(data_loader):
             ids = d['ids']
@@ -37,93 +39,80 @@ def predict(df):
             targets_start = d['targets_start']
             targets_end = d['targets_end']
             origin_sentiment = d['origin_sentiment']
-            padding_len = d['padding_len']
-            text_token = d['text_token']
+            #padding_len = d['padding_len']
+            #text_token = d['text_token']
             selected_text = d['origin_selected_text']
             origin_text = d['origin_text']
+            offsets = d['offset'].numpy()
+            fin_offset.append(offsets)
 
-            ids = ids.to(DEVICE, dtype=torch.long)
-            mask_id = mask_id.to(DEVICE, dtype=torch.long)
-            token_type_id  = token_type_id.to(DEVICE, dtype=torch.long)
-            targets_start = targets_start.to(DEVICE, dtype=torch.float)
-            targets_end = targets_end.to(DEVICE, dtype=torch.float)
+            with torch.no_grad():
+                ids = ids.to(device, dtype=torch.long)
+                mask_id = mask_id.to(device, dtype=torch.long)
+                token_type_id = token_type_id.to(device, dtype=torch.long)
+                targets_start = targets_start.to(device, dtype=torch.float)
+                targets_end = targets_end.to(device, dtype=torch.float)
 
-            output_start, output_end = model(ids, mask_id, token_type_id)
+                output_start, output_end = model(ids, mask_id, token_type_id)
 
-            fin_output_start.append(torch.sigmoid(output_start).cpu().detach().numpy())
-            fin_output_end.append(torch.sigmoid(output_end).cpu().detach().numpy())
-            fin_padding_len.extend(padding_len.cpu().detach().numpy().tolist())
-            fin_text_token.extend(text_token)
-            fin_orig_sentiment.extend(origin_sentiment)
-            fin_orig_selected.extend(selected_text)
-            fin_origin_text.extend(origin_text)
+                fin_output_start.append(torch.softmax(output_start, axis=1).cpu().detach().numpy())
+                fin_output_end.append(torch.softmax(output_end, axis=1).cpu().detach().numpy())
+                #fin_padding_len.extend(padding_len.cpu().detach().numpy().tolist())
+                #fin_text_token.extend(text_token)
+                fin_orig_sentiment.extend(origin_sentiment)
+                fin_orig_selected.extend(selected_text)
+                fin_origin_text.extend(origin_text)
 
-    fin_output_start = np.vstack(fin_output_start)
-    fin_output_end = np.vstack(fin_output_end)
+        fin_offset = np.vstack(fin_offset)
+        fin_output_start = np.vstack(fin_output_start)
+        fin_output_end = np.vstack(fin_output_end)
 
-    output = []
-    for j in tqdm(range(len(fin_output_start))):
-        orig_sentiment = fin_orig_sentiment[j]
-        padding_len    = fin_padding_len[j]
-        text_token     = fin_text_token[j]
-        origin_text    = fin_origin_text[j]
-        origin_selected = fin_orig_selected[j]
+        output = []
+        for j in range(len(fin_output_start)):
+            #text_token = fin_text_token[j]
+            #padding_len = fin_padding_len[j]
+            origin_selected = fin_orig_selected[j]
+            origin_sentiment = fin_orig_sentiment[j]
+            origin_text = fin_origin_text[j]
+            offset = fin_offset[j]
+            start_idx = fin_output_start[j]
+            end_idx = fin_output_end[j]
+            start_idx = np.argmax(start_idx)
+            end_idx = np.argmax(end_idx)
+            # start_idx = np.nonzero(start_idx)[0][0]
+            # end_idx = np.nonzero(end_idx)[0][0]
 
-
-        if padding_len > 0:
-            mask_start = fin_output_start[j][:-padding_len] >= THRESHOLD
-            mask_end   = fin_output_end[j][:-padding_len] >= THRESHOLD
-        else:
-            mask_start = fin_output_start[i][:-padding_len]
-            mask_end   = fin_output_end[i][:-padding_len]
-
-        mask = [0]* len(mask_start)
-        idx_start_l = np.nonzero(mask_start)[0]
-        idx_end_l   = np.nonzero(mask_end)[0]
-
-        if len(idx_start_l)>0:
-            idx_start = idx_start_l[0]
-            if len(idx_end_l) > 0:
-                idx_end = idx_end_l[0]
-            else:
-                idx_end = idx_start 
-        else:
-            idx_start = idx_end = 0
-
-        for i in range(idx_start, idx_end+1):
-            mask[i] = 1
-
-
-        output_token = [token for i, token in enumerate(text_token.split()) if mask[i]==1 and token not in ("[CLS]", "[SEP]")]
-        
-        final_output = ''
-        for token in output_token:
-            if token.startswith("##"):
-                final_output+=token[2:]
-            elif len(token) == 1 or token in string.punctuation:
-                final_output+=token
-            else:
-                final_output+=' '
-                final_output+=token
+            if end_idx < start_idx:
+                end_idx = start_idx
             
-        output.append(final_output.strip())
+            final_output = ""
+            for ix in range(start_idx, end_idx + 1):
+                final_output += origin_text[offset[ix][0]:offset[ix][1]]
+                if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
+                    final_output += " "
 
-    return output
+            if origin_sentiment == 'neutral' or len(origin_text.split()) < 4:
+                final_output = origin_text
+
+            output.append(final_output)
+
+        return output
 
 
 
 
 if __name__ == '__main__':
     model = BertUncasedQa(BERT_PATH).to(DEVICE)
+    MODEL_PATH = '../model/model_fold1.pth'
+    device = 'cuda'
     model.load_state_dict(torch.load(MODEL_PATH))
     model.eval()
 
     test_df = pd.read_csv("../input/test.csv")
+    sample_submission = pd.read_csv("../input/sample_submission.csv")
     test_df.loc[:, "selected_text"] = test_df.text.values
     preds = predict(test_df)
-    test_df.loc[:, "selected_text"] = preds
-    test_df[['textID', 'selected_text']].to_csv("../output/submission.csv", index=True)
-    print(test_df.head())
-    # sub = pd.read_csv("../input/sample_submission.csv")
-    # print(test_df.head())
-    # print(sub.head())
+    print(preds)
+    sample_submission.loc[:, "selected_text"] = preds
+    sample_submission.to_csv("../output/submission.csv", index=False)
+    print(sample_submission.head())

@@ -4,8 +4,10 @@ import numpy as np
 import string
 from utils import jaccard, AverageMeter
 from tqdm import tqdm
+from config import *
 
 def loss_fn(o1, o2, t1, t2):
+
     l1 = nn.BCEWithLogitsLoss()(o1, t1)
     l2 = nn.BCEWithLogitsLoss()(o2, t2)
     return l1+l2
@@ -41,10 +43,11 @@ def eval_loop_fn(data_loader, model, device):
     fin_output_start = []
     fin_output_end = []
     fin_orig_sentiment = []
-    fin_padding_len = []
-    fin_text_token = []
+    #fin_padding_len = []
+    #fin_text_token = []
     fin_origin_text = []
     fin_orig_selected = []
+    fin_offset = []
 
     for bi, d in enumerate(data_loader):
         ids = d['ids']
@@ -53,10 +56,12 @@ def eval_loop_fn(data_loader, model, device):
         targets_start = d['targets_start']
         targets_end = d['targets_end']
         origin_sentiment = d['origin_sentiment']
-        padding_len = d['padding_len']
-        text_token = d['text_token']
+        #padding_len = d['padding_len']
+        #text_token = d['text_token']
         selected_text = d['origin_selected_text']
         origin_text = d['origin_text']
+        offsets = d['offset'].numpy()
+        fin_offset.append(offsets)
 
         with torch.no_grad():
             ids = ids.to(device, dtype=torch.long)
@@ -68,64 +73,45 @@ def eval_loop_fn(data_loader, model, device):
             output_start, output_end = model(ids, mask_id, token_type_id)
             loss = loss_fn(output_start, output_end, targets_start, targets_end)
 
-            fin_output_start.append(torch.sigmoid(output_start).cpu().detach().numpy())
-            fin_output_end.append(torch.sigmoid(output_end).cpu().detach().numpy())
-            fin_padding_len.extend(padding_len.cpu().detach().numpy().tolist())
-            fin_text_token.extend(text_token)
+            fin_output_start.append(torch.softmax(output_start, axis=1).cpu().detach().numpy())
+            fin_output_end.append(torch.softmax(output_end, axis=1).cpu().detach().numpy())
+            #fin_padding_len.extend(padding_len.cpu().detach().numpy().tolist())
+            #fin_text_token.extend(text_token)
             fin_orig_sentiment.extend(origin_sentiment)
             fin_orig_selected.extend(selected_text)
             fin_origin_text.extend(origin_text)
+            
 
+    fin_offset = np.vstack(fin_offset)
     fin_output_start = np.vstack(fin_output_start)
     fin_output_end = np.vstack(fin_output_end)
 
     jac_score = []
 
     for j in range(len(fin_output_start)):
-        text_token = fin_text_token[j]
-        padding_len = fin_padding_len[j]
+        #text_token = fin_text_token[j]
+        #padding_len = fin_padding_len[j]
         origin_selected = fin_orig_selected[j]
         origin_sentiment = fin_orig_sentiment[j]
         origin_text = fin_origin_text[j]
+        offset = fin_offset[j]
+        start_idx = fin_output_start[j]
+        end_idx = fin_output_end[j]
+        start_idx = np.argmax(start_idx)
+        end_idx = np.argmax(end_idx)
+        # start_idx = np.nonzero(start_idx)[0][0]
+        # end_idx = np.nonzero(end_idx)[0][0]
 
-        if padding_len > 0:
-            mask_start = fin_output_start[j][:-padding_len] >= THRESHOLD
-            mask_end = fin_output_end[j][:-padding_len] >= THRESHOLD
-        else:
-            mask_start = fin_output_start[j] >= THRESHOLD
-            mask_end = fin_output_end[j] >= THRESHOLD
-
-        mask = [0]*len(mask_start)
-        idx_start_l = np.nonzero(mask_start)[0]
-        idx_end_l = np.nonzero(mask_end)[0]
-
-        if len(idx_start_l) >0:
-            idx_start = idx_start_l[0]
-            if len(idx_end_l)>0:
-                idx_end = idx_end_l[0]
-            else:
-                idx_end = idx_start 
-        else:
-            idx_start = idx_end = 0
-
-        for i in range(idx_start, idx_end+1):
-            mask[i] = 1
-
-        output_tokens = [token for i, token in enumerate(text_token.split()) if mask[i] == 1]
-        output_tokens = [token for token in output_tokens if token not in ("[CLS]", "[SEP]")]
-
+        if end_idx < start_idx:
+            end_idx = start_idx
+        
         final_output = ""
-        for token in output_tokens:
-            if token.startswith("##"):
-                final_output+=token[2:]
-            elif len(token) == 1 or token in string.punctuation:
-                final_output+=token
-            else:
-                final_output+=' '
-                final_output+=token
+        for ix in range(start_idx, end_idx + 1):
+            final_output += origin_text[offset[ix][0]:offset[ix][1]]
+            if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
+                final_output += " "
 
-        final_output = final_output.strip()
-        if origin_sentiment == 'neutral' or len(text_token.split()) < 4:
+        if origin_sentiment == 'neutral' or len(origin_text.split()) < 4:
             final_output = origin_text
         
         jac = jaccard(final_output, origin_selected)
