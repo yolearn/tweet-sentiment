@@ -55,11 +55,11 @@ def eval_loop_fn(data_loader, model, device):
         token_type_id = d['token_type_id']
         targets_start = d['targets_start']
         targets_end = d['targets_end']
-        origin_sentiment = d['origin_sentiment']
+        origin_sentiment = d['orig_sentiment']
         #padding_len = d['padding_len']
         #text_token = d['text_token']
-        selected_text = d['origin_selected_text']
-        origin_text = d['origin_text']
+        selected_text = d['orig_selected_text']
+        origin_text = d['orig_text']
         offsets = d['offset'].numpy()
         fin_offset.append(offsets)
 

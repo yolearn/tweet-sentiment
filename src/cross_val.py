@@ -25,7 +25,7 @@ class CrossValidation:
             pass
 
 
-df = pd.read_csv(TRAIN_FILE)
+df = pd.read_csv(TRAIN_FILE, nrows=20)
 # print(df.shape[0])
 # df = df[df['sentiment'] != 'neutral']
 # print(df.shape[0])
