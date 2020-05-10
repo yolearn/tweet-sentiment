@@ -11,9 +11,9 @@ NFOLDS = 3
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
 MAX_LEN = 128
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 EPOCH = 1
-LR = 3e-5
+LR = 5e-5
 THRESHOLD = 0.3
 MODEL_PATH = '../model/model.pth'
 

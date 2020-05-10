@@ -1,7 +1,7 @@
 from engine import trn_loop_fn, eval_loop_fn
 import pandas as pd 
 import torch
-from dataload import TweetDataset
+from dataload import TweetDataset, RoTweetDataset
 from sklearn import model_selection
 from model import BertUncasedQa, RobertUncaseQa
 from transformers import AdamW
@@ -26,7 +26,7 @@ def run():
         tokenizer = config.ROBERT_TOKENIZER
         optimzer = AdamW(model.parameters(), lr=config.LR)
 
-        trn_dataset = TweetDataset(
+        trn_dataset = RoTweetDataset(
             text=trn_df['text'].values,
             selected_text=trn_df['selected_text'].values,
             sentiment=trn_df['sentiment'].values,
@@ -34,7 +34,7 @@ def run():
             max_len=config.MAX_LEN
         )
 
-        val_dataset = TweetDataset(
+        val_dataset = RoTweetDataset(
             text=val_df['text'].values,
             selected_text=val_df['selected_text'].values,
             sentiment=val_df['sentiment'].values,

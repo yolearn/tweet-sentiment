@@ -97,6 +97,8 @@ class RoTweetDataset:
         self.tokenizer = tokenizer
         self.max_len = max_len
 
+    def __len__(self):
+        return len(self.text)
 
     def __getitem__(self, item):
         text = " ".join(str(self.text[item]).split())
@@ -154,8 +156,8 @@ class RoTweetDataset:
 
         return {
             'ids':torch.tensor(ids, dtype=torch.long), 
-            'token_type_ids' : torch.tensor(token_type_ids, dtype=torch.long), 
-            'mask_ids' : torch.tensor(mask_ids, dtype=torch.long), 
+            'token_type_id' : torch.tensor(token_type_ids, dtype=torch.long), 
+            'mask_id' : torch.tensor(mask_ids, dtype=torch.long), 
             'offset' : torch.tensor(offsets, dtype=torch.long), 
             'orig_sentiment' : self.sentiment[item],
             'orig_selected_text' : self.selected_text[item],
