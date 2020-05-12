@@ -7,7 +7,7 @@ class BertUncasedQa(nn.Module):
         super(BertUncasedQa, self).__init__()
         self.bert_path = bert_path
         self.bert = transformers.BertModel.from_pretrained(self.bert_path)
-        self.bert_drop = nn.Dropout(0.5)
+        self.bert_drop = nn.Dropout(0.1)
         self.linear1 = nn.Linear(768,100)
         self.linear2 = nn.Linear(100,2)
 
@@ -31,7 +31,7 @@ class RobertUncaseQa(nn.Module):
         super(RobertUncaseQa, self).__init__()
         self.robert_path = robert_path
         self.model = transformers.RobertaModel.from_pretrained(self.robert_path)
-        self.bert_drop = nn.Dropout(0.3)
+        self.bert_drop = nn.Dropout(0.1)
         self.linear = nn.Linear(768,2)
 
     def forward(self, ids, mask_id, token_type_id):

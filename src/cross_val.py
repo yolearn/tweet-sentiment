@@ -13,7 +13,6 @@ class CrossValidation:
         self.nfolds = nfolds
         self.shuffle = shuffle
         
-
     def split(self):
         if self.split_type == 'kfold':
             kf = KFold(n_splits=self.nfolds, shuffle=self.shuffle)
@@ -25,7 +24,7 @@ class CrossValidation:
             pass
 
 
-df = pd.read_csv(TRAIN_FILE, nrows=1000)
+df = pd.read_csv(TRAIN_FILE).dropna()[0:100]
 # print(df.shape[0])
 # df = df[df['sentiment'] != 'neutral']
 # print(df.shape[0])
