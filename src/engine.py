@@ -5,6 +5,8 @@ import string
 from utils import jaccard, AverageMeter
 from tqdm import tqdm
 from config import *
+import time 
+
 
 def loss_fn(o1, o2, t1, t2):
     # l1 = nn.MarginRankingLoss()(o1, t1)
@@ -18,7 +20,6 @@ def trn_loop_fn(data_loader, model, optimzer, device):
 
     model.train()
     losses = AverageMeter()
-    print(len(data_loader))
     tk = tqdm(data_loader, total=len(data_loader))
 
     for bi, d in enumerate(tk):
@@ -39,6 +40,7 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         loss = loss_fn(o1, o2, target_start_idx, target_end_idx)
         loss.backward()
         optimzer.step()      
+
         losses.update(loss.item(), ids.size(0))
         tk.set_postfix(loss=losses.avg)
 
@@ -108,16 +110,81 @@ def eval_loop_fn(data_loader, model, device):
             end_idx = start_idx
         
         final_output = ""
-        for ix in range(start_idx, end_idx + 1):
-            final_output += orig_text[offset[ix][0]:offset[ix][1]]
+        count = 0
+        for ix in range(start_idx, end_idx+1):
+            final_output += orig_text[offset[ix][0]:offset[ix][1]]     
             if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
                 final_output += " "
+            
 
-        if orig_sentiment == 'neutral' or len(orig_text.split()) < 4:
-            final_output = orig_text
+        # if orig_sentiment == 'neutral' or len(orig_text.split()) < 4:
+        #     final_output = orig_text
         
         jac = jaccard(final_output, origin_selected)
         jac_score.append(jac)
 
     return np.mean(jac_score)
 
+
+
+# def trn_loop_fn(data_loader, model, optimzer, device):
+#     model.train()
+#     optimzer.zero_grad()
+#     tk = tqdm(data_loader, len(data_loader))
+#     losses = AverageMeter()
+
+#     for i, d enumerate(tk):
+#         ids = d['ids']
+#         mask_ids = d['mask_ids']
+#         token_type_ids = d['token_type_ids']
+#         target_start_idx = d['target_start_idx']
+#         target_end_idx = d['target_end_idx']
+#         offsets = d['offsets']
+#         orig_sentiment = d['orig_sentiment']
+#         orig_sele_text = d['orig_sele_text']
+#         orig_text = d['orig_text']
+
+#         ids = ids.to(device, dtype=torch.long)
+#         mask_ids = mask_ids.to(device, dtype=torch.long)
+#         token_type_ids = token_type_ids.to(device, dtype=torch.long)
+#         target_start_idx = target_start_idx.to(device, dtype=torch.float)
+#         target_end_idx = target_end_idx.to(device, dtype=torch.float)
+
+#         o1, o2 = model(ids, token_type_ids, mask_ids)
+#         loss = loss_fn(o1, o2, target_start_idx, target_end_idx)
+#         loss.backward()
+#         optimzer.step()
+#         losses.update(loss.item(), ids.size(0))
+#         tk.set_postfix(loss=losses.avg)
+
+
+# def eval_loop_fn(data_loader, model, device):
+#     model.eval()
+
+#     fin_output_start = []
+#     fin_output_end = []
+#     fin_offsets = []
+#     fin_
+#     with torch.no_grad():
+#         for i, d enumerate(data_loader):
+#             ids = d['ids']
+#             mask_ids = d['mask_ids']
+#             token_type_ids = d['token_type_ids']
+#             target_start_idx = d['target_start_idx']
+#             target_end_idx = d['target_end_idx']
+#             offsets = d['offsets']
+#             orig_sentiment = d['orig_sentiment']
+#             orig_sele_text = d['orig_sele_text']
+#             orig_text = d['orig_text']
+
+#             ids = ids.to(device, dtype=torch.long)
+#             mask_ids = mask_ids.to(device, dtype=torch.long)
+#             token_type_ids = token_type_ids.to(device, dtype=torch.long)
+#             target_start_idx = target_start_idx.to(device, dtype=torch.float)
+#             target_end_idx = target_end_idx.to(device, dtype=torch.float)
+
+#             o1, o2 = model(ids, token_type_ids, mask_ids) 
+#             torch.softmax(o1, dim=1).detach().cpu().numpy()  
+#             fin_output_start.append(o1)
+#             fin_output_end.append(o2)
+#             fin_offsets.append(offsets)

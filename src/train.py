@@ -8,7 +8,7 @@ from transformers import AdamW
 import config
 from cross_val import cv
 import torch.nn as nn
-
+from utils import upload_to_aws, EarlyStopping
 
 
 def run():
@@ -57,17 +57,29 @@ def run():
             batch_size = config.BATCH_SIZE
         ) 
 
-        best_score = 0
+        model_pth = f'../model/model_fold{fold+1}.pth'
+        earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
+
         for i in range(config.EPOCH):
             trn_loop_fn(trn_data_loader, model, optimzer, config.DEVICE)
+            cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
+            print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             cur_score = eval_loop_fn(val_data_loader, model, config.DEVICE)
-            print(f"{i+1} EPOCH : JACCARDS = {cur_score}")
-            if cur_score > best_score:
-                torch.save(model.state_dict(), f'../model/model_fold{fold+1}_del.pth')
-                best_score = cur_score
+            print(f"Val {i+1} EPOCH : JACCARDS = {cur_score}")
+            
+            earlystop(cur_score, model, i+1)
+            if earlystop.earlystop:
+                print("Early stopping")
+                break
             
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
     run()
+
+    #model_save
+    if False:
+        for file_name in os.listdir("../model"):
+            local_file = os.path.join("../model", file_name)
+            upload_to_aws(local_file, config.BUCKET_NAME, file_name)
        
     

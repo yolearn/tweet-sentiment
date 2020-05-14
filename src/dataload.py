@@ -183,7 +183,15 @@ class TweetDataset:
         # should return start and end 
         text = " ".join(str(self.text[item]).split())
         selected_text = " ".join(str(self.selected_text[item]).split())
-        
+        sentiment = self.sentiment[item]
+
+
+        sentiment_d = {
+            'positive': 1313,
+            'negative': 2430,
+            'neutral': 7974
+        }
+
         len_sel_text = len(selected_text)
         char_start_idx = None 
         char_end_idx = None
@@ -223,8 +231,8 @@ class TweetDataset:
         target_start_idx = np.zeros(self.max_len)
         target_end_idx = np.zeros(self.max_len)
         # Due to [CLS]+1
-        target_start_idx[targets_idx[0]+1] = 1
-        target_end_idx[targets_idx[0]+1] = 1
+        target_start_idx[targets_idx[0]+4] = 1
+        target_end_idx[targets_idx[-1]+4] = 1
         
         """
         Robert
@@ -235,11 +243,12 @@ class TweetDataset:
         - single input : [CLS] X [SEP]
         - pair input : [CLS] X [SEP] Y [SEP]
         """
+
         if self.model_type == 'roberta':
-            ids = [0] + ids + [2]
-            token_type_ids = [0] + token_type_ids + [0]
-            mask_ids = [1] + mask_ids + [1]
-            offsets = [(0,0)] + offsets + [(0,0)]
+            ids = [0] + [sentiment_d[sentiment]] + [2] +[2] + ids + [2]
+            token_type_ids = [0] * 4 + token_type_ids + [0]
+            mask_ids = [1] * 4 + mask_ids + [1]
+            offsets = [(0,0)] * 4 + offsets + [(0,0)]
         
         elif self.model_type == 'bert':
             pass
@@ -260,16 +269,10 @@ class TweetDataset:
             'target_start_idx' : torch.tensor(target_start_idx, dtype=torch.long),
             'target_end_idx' : torch.tensor(target_end_idx, dtype=torch.long),
             'offsets' : torch.tensor(offsets, dtype=torch.long),
-            'orig_sentiment' : self.sentiment[item],
-            'orig_sele_text' : self.selected_text[item],
-            'orig_text' : self.text[item],
+            'orig_sentiment' : sentiment,
+            'orig_sele_text' : selected_text,
+            'orig_text' : text,
         }
-
-
-
-
-        
-
 
 
 

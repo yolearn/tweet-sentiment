@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 from config import *
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 class CrossValidation:
     def __init__(self, df, split_type, seed, nfolds, shuffle=True):
@@ -16,19 +16,18 @@ class CrossValidation:
     def split(self):
         if self.split_type == 'kfold':
             kf = KFold(n_splits=self.nfolds, shuffle=self.shuffle)
-            for i, (trn_ind, val_ind) in enumerate(kf.split(self.df)):
+            for i, (trn_idx, val_idx) in enumerate(kf.split(self.df)):
                 print(f"{i+1} fold : ")
-                yield (self.df.iloc[trn_ind], self.df.iloc[val_ind])
+                yield (self.df.iloc[trn_idx], self.df.iloc[val_idx])
 
-        elif self.split_type == 'ks':
-            pass
+        elif self.split_type == 'skfold':
+            skf = StratifiedKFold(n_splits=self.nfolds, shuffle=self.shuffle)
+            for i, (trn_idx, val_idx) in enumerate(skf.split(self.df)):
+                print(f"{i+1} fold : ")
+                yield (self.df[trn_idx], self.df[val_idx])
 
 
-df = pd.read_csv(TRAIN_FILE).dropna()[0:100]
-# print(df.shape[0])
-# df = df[df['sentiment'] != 'neutral']
-# print(df.shape[0])
-# print(df.head())
+df = pd.read_csv(TRAIN_FILE).dropna()
 df['text'] = df['text'].astype(str)
 df['selected_text'] = df['selected_text'].astype(str)
 cv = CrossValidation(df, SPLIT_TYPE, SEED, NFOLDS, SHUFFLE)
