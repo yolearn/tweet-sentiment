@@ -12,15 +12,7 @@ from utils import upload_to_aws, EarlyStopping
 
 
 def run():
-    #df = df[df['sentiment']!= 'neutral']
-    # trn_df, val_df = model_selection.train_test_split(df, 
-    #                     random_state=42, 
-    #                     test_size=0.2, 
-    #                     stratify=df.sentiment.values
-    #     )
-    # df['sentiment'] = df['sentiment'].apply(
-    #                     lambda x : 1 if x=='positive' else 0
-    # )
+    score = []
     for fold, (trn_df, val_df) in enumerate(cv.split()):
         #bert_model = BertUncasedQa(config.BERT_PATH).to(config.DEVICE)
         #tokenizer = BERT_TOKENIZER
@@ -60,7 +52,9 @@ def run():
         model_pth = f'../model/model_fold{fold+1}.pth'
         earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
 
+        
         for i in range(config.EPOCH):
+            
             trn_loop_fn(trn_data_loader, model, optimzer, config.DEVICE)
             cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
             print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
@@ -71,9 +65,28 @@ def run():
             if earlystop.earlystop:
                 print("Early stopping")
                 break
+
+        score.append(earlystop.max)
+            
+        
+    print("cv score : ", score)
+    print("average cv score : ", sum(score) / len(score))
             
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
+    # parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
+    # parser.add_argument('--batch_size', default=16)
+    # parser.add_argument('--max_len', default=128)
+    # parser.add_argument('--EPOCH', default=1)
+    # parser.add_argument('--lr', default=3e-5)
+    # parser.add_argument('--nfolds', default=5)
+    # parser.add_argument('--split_type', default='kfold')
+    # parse_args.add_argument('--patience', default=1)
+    # parse_args.add_argument('--dropout_rate', default=0.3)
+
+    # args = parser.parse_args()
+    # args = dict(vars(args))
+
     run()
 
     #model_save

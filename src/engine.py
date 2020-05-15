@@ -17,7 +17,6 @@ def loss_fn(o1, o2, t1, t2):
 
 
 def trn_loop_fn(data_loader, model, optimzer, device):
-
     model.train()
     losses = AverageMeter()
     tk = tqdm(data_loader, total=len(data_loader))

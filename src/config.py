@@ -3,18 +3,32 @@ import os
 import pandas as pd
 import torch
 import transformers
-
+#from train import args
 #CUDA_VISIBLE_DEVICES=1 
 TRAIN_FILE = "../input/train.csv"
 SEED = 42
+# NFOLDS = args['nfolds']
+# SHUFFLE = True
+# SPLIT_TYPE = args['split_type']
+# MAX_LEN = args['max_len']
+# BATCH_SIZE = args['batch_size']
+# EPOCH = args['epoch']
+# LR = args['lr']
+# DROPOUT_RATE = args['dropout_rate']
+# PATIENCE = args['patience']
+
 NFOLDS = 5
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
 MAX_LEN = 128
 BATCH_SIZE = 64
-EPOCH = 20
-LR = 3e-5
+EPOCH = 50
+LR = 5e-6
+DROPOUT_RATE = 0.2
 PATIENCE = 5
+
+
+
 MODEL_TYPE = 'roberta'
 BUCKET_NAME = "kaggletweet"
 
