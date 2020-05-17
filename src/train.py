@@ -1,19 +1,26 @@
+import argparse
 from engine import trn_loop_fn, eval_loop_fn
 import pandas as pd 
+import numpy as np
 import torch
 from dataload import TweetDataset
 from sklearn import model_selection
 from model import BertUncasedQa, RobertUncaseQa
 from transformers import AdamW
 import config
-from cross_val import cv
+from cross_val import CrossValidation
 import torch.nn as nn
-from utils import upload_to_aws, EarlyStopping
+from utils import upload_to_aws, EarlyStopping, set_seed
+import time
 
-
-def run():
+def run(cv):
     score = []
-    for fold, (trn_df, val_df) in enumerate(cv.split()):
+    start_preds = np.zeros((df.shape[0], config.MAX_LEN))
+    end_preds = np.zeros((df.shape[0], config.MAX_LEN))
+    
+    for fold, (trn_idx, val_idx) in enumerate(cv.split()):
+        trn_df = df.iloc[trn_idx]
+        val_df = df.iloc[val_idx]
         #bert_model = BertUncasedQa(config.BERT_PATH).to(config.DEVICE)
         #tokenizer = BERT_TOKENIZER
         robert_model = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
@@ -51,27 +58,27 @@ def run():
 
         model_pth = f'../model/model_fold{fold+1}.pth'
         earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
-
-        
-        for i in range(config.EPOCH):
-            
+   
+        for i in range(config.EPOCH):       
             trn_loop_fn(trn_data_loader, model, optimzer, config.DEVICE)
-            cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
-            print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
-            cur_score = eval_loop_fn(val_data_loader, model, config.DEVICE)
-            print(f"Val {i+1} EPOCH : JACCARDS = {cur_score}")
-            
-            earlystop(cur_score, model, i+1)
+            #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
+            #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
+            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
+
+            earlystop(cur_score, model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
                 break
 
+        start_preds[val_idx] = earlystop.pred1
+        end_preds[val_idx] = earlystop.pred2
         score.append(earlystop.max)
-            
-        
+                  
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))
-            
+    preds = np.concatenate([start_preds, end_preds], axis=1)
+    pd.DataFrame(preds).to_csv('cv.csv', index=False)   
+
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
     # parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
@@ -81,13 +88,18 @@ if __name__ == '__main__':
     # parser.add_argument('--lr', default=3e-5)
     # parser.add_argument('--nfolds', default=5)
     # parser.add_argument('--split_type', default='kfold')
-    # parse_args.add_argument('--patience', default=1)
-    # parse_args.add_argument('--dropout_rate', default=0.3)
+    # parser.add_argument('--patience', default=1)
+    # parser.add_argument('--dropout_rate', default=0.3)
 
     # args = parser.parse_args()
     # args = dict(vars(args))
 
-    run()
+    set_seed()
+    df = pd.read_csv(config.TRAIN_FILE).dropna()[:1000]
+    df['text'] = df['text'].astype(str)
+    df['selected_text'] = df['selected_text'].astype(str)
+    cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)
+    run(cv)
 
     #model_save
     if False:
