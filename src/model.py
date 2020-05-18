@@ -34,8 +34,11 @@ class RobertUncaseQa(nn.Module):
         super(RobertUncaseQa, self).__init__()
         self.robert_path = robert_path
         self.model = transformers.RobertaModel.from_pretrained(self.robert_path)
-        self.bert_drop = nn.Dropout(0.2)
+        self.bert_drop = nn.Dropout(config.DROPOUT_RATE)
+        #self.conv1d = nn.Conv1d(768,10,1)
         self.linear1 = nn.Linear(768,2)
+    
+        #self.linear1 = nn.Linear(768,2)
         #self.linear2 = nn.Linear(500,300)
         #self.linear3 = nn.Linear(300,100)
         #self.linear4 = nn.Linear(100,2)
@@ -47,6 +50,10 @@ class RobertUncaseQa(nn.Module):
         """
         sequence_output, pooled_output = self.model(ids, mask_id, token_type_id)
         x = self.bert_drop(sequence_output)
+        #x = x.transpose(2,1)
+        #x = self.conv1d(x)
+        #x = x.transpose(2,1)
+
         x = self.linear1(x)
         # x = F.relu(x)
         # x = self.bert_drop(x)

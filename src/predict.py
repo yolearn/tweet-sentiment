@@ -49,10 +49,9 @@ def predict(df):
 
 if __name__ == '__main__':
 
-    test_df = pd.read_csv("../input/test.csv")
+    test_df = pd.read_csv("../input/test.csv")[:100]
     test_df.loc[:, "selected_text"] = test_df.loc[:, 'text']
     sample_submission = pd.read_csv("../input/sample_submission.csv")
     preds = predict(test_df)
-
-    test_df.loc[:, "selected_text"] = preds
-    print(test_df.head())
+    sample_submission.loc[:, "selected_text"] = preds
+    sample_submission.to_csv('../output/submission/output.csv', index=False)

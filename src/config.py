@@ -23,9 +23,9 @@ SEED = 42
 NFOLDS = 5
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
-MAX_LEN = 128
+MAX_LEN = 95
 BATCH_SIZE = 64
-EPOCH = 3
+EPOCH = 10
 LR = 3e-5
 DROPOUT_RATE = 0.2
 PATIENCE = 3
@@ -47,11 +47,13 @@ elif MODEL_TYPE == 'roberta':
     ROBERT_TOKENIZER = tokenizers.ByteLevelBPETokenizer(
         vocab_file="../input/vocab.json",
         merges_file="../input/merges.txt",
-        lowercase=True
+        lowercase=False
     )
     TOKENIZER = ROBERT_TOKENIZER
     #roberta-base
+    #roberta-large
     MODEL_PATH = 'roberta-base'
+    
 
 
 if torch.cuda.is_available():

@@ -64,7 +64,7 @@ def run(cv):
             #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
             #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
-
+            print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             earlystop(cur_score, model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
@@ -77,7 +77,7 @@ def run(cv):
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))
     preds = np.concatenate([start_preds, end_preds], axis=1)
-    pd.DataFrame(preds).to_csv('cv.csv', index=False)   
+    pd.DataFrame(preds).to_csv(f'../output/validation/cv.csv', index=False)   
 
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
@@ -95,7 +95,8 @@ if __name__ == '__main__':
     # args = dict(vars(args))
 
     set_seed()
-    df = pd.read_csv(config.TRAIN_FILE).dropna()[:1000]
+    df = pd.read_csv(config.TRAIN_FILE).dropna()
+    df = df[df.sentiment != 'neutral']
     df['text'] = df['text'].astype(str)
     df['selected_text'] = df['selected_text'].astype(str)
     cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)

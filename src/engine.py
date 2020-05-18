@@ -21,8 +21,8 @@ def custLoss(preds, target):
     return torch.sum((target-pred)**2)
 
 def loss_fn(o1, o2, t1, t2):
-    l1 = nn.BCEWithLogitsLoss()(o1, t1) + custLoss(o1, t1) 
-    l2 = nn.BCEWithLogitsLoss()(o2, t2) + custLoss(o2, t2) 
+    l1 = nn.BCEWithLogitsLoss()(o1, t1)
+    l2 = nn.BCEWithLogitsLoss()(o2, t2)
 
     return l1+l2
 
@@ -250,12 +250,12 @@ def pred_loop_fn(data_loader, device):
             fin_orig_sentiment.extend(orig_sentiment)
             fin_orig_text.extend(orig_text)
     
-    output_start = np.vstack(output_start)
-    output_end = np.vstack(output_end)
-    offsets = np.vstack(offsets)
+    fin_output_start = np.vstack(fin_output_start)
+    fin_output_end = np.vstack(fin_output_end)
+    fin_offset = np.vstack(fin_offset)
 
     fin_output_string = []
-    for i in range(fin_output_start.shape[0]):
+    for i in range(output_start.shape[0]):
         output_start = fin_output_start[i]
         output_start = np.argmax(output_start)
         output_end = fin_output_end[i]
@@ -272,7 +272,8 @@ def pred_loop_fn(data_loader, device):
             output_string += orig_text[offset[j][0]:offset[j][1]]
             #if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
             #    final_output += " "
-        
+    
         fin_output_string.append(output_string)
+
     return fin_output_string
         
