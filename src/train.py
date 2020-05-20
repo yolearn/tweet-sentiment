@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from dataload import TweetDataset
 from sklearn import model_selection
-from model import BertUncasedQa, RobertUncaseQa
+from model import BertUncasedQa, RobertUncaseQa, AlbertQa
 from transformers import AdamW
 import config
 from cross_val import CrossValidation
@@ -21,10 +21,21 @@ def run(cv):
     for fold, (trn_idx, val_idx) in enumerate(cv.split()):
         trn_df = df.iloc[trn_idx]
         val_df = df.iloc[val_idx]
-        #bert_model = BertUncasedQa(config.BERT_PATH).to(config.DEVICE)
-        #tokenizer = BERT_TOKENIZER
-        robert_model = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-        model = robert_model
+        if config.MODEL_TYPE == 'bert':
+            print('Initial Bert.....')
+            bert_model = BertUncasedQa(config.BERT_PATH).to(config.DEVICE)
+            model = robert_model
+
+        elif config.MODEL_TYPE == 'robert':
+            print('Initial Robert.....')
+            robert_model = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
+            model = robert_model
+
+        elif config.MODEL_TYPE == 'albert':
+            print('Initial Alert.....')
+            albert_model = AlbertQa(config.MODEL_PATH).to(config.DEVICE)
+            model = albert_model
+
         model = nn.DataParallel(model)
         optimzer = AdamW(model.parameters(), lr=config.LR)
 
@@ -74,12 +85,14 @@ def run(cv):
                 print("Early stopping")
                 break
 
+        score.append(earlystop.max)
+
     if config.SPLIT_TYPE != 'pure_split':
         start_preds[val_idx] = earlystop.pred1
         end_preds[val_idx] = earlystop.pred2
 
 
-    score.append(earlystop.max)
+        
                   
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))

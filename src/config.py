@@ -8,6 +8,7 @@ import sentencepiece as spm
 import os
 import sentencepiece_pb2
 
+
 class SentencePieceTokenizer:
     def __init__(self, model_path):
         self.sp = spm.SentencePieceProcessor()
@@ -44,14 +45,14 @@ NFOLDS = 5
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
 #SPLIT_TYPE = 'pure_split'
-MAX_LEN = 95
+MAX_LEN = 128
 BATCH_SIZE = 32
 EPOCH = 10
 LR = 3e-5
 DROPOUT_RATE = 0.2
 PATIENCE = 3
 
-MODEL_TYPE = 'roberta'
+MODEL_TYPE = 'albert'
 BUCKET_NAME = "kaggletweet"
 
 # = '../model/model.pth'
@@ -87,6 +88,9 @@ if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
 else :
     DEVICE = torch.device('cpu')
+
+
+
 
 if __name__ == "__main__":
     # print(os.path.join(BERT_PATH, "vocab.txt"))

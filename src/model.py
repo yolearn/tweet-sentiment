@@ -74,29 +74,22 @@ class RobertUncaseQa(nn.Module):
 
 
 
-# class RobertUncaseQa(transformers.BertPreTrainedModel):
-#     def __init__(self, robert_path, conf):
-#         super(RobertUncaseQa, self).__init__(conf)
-#         self.robert_path = robert_path
-#         self.model = transformers.RobertaModel.from_pretrained(self.robert_path, config=conf)
-#         self.bert_drop = nn.Dropout(config.DROPOUT_RATE)
-#         #self.conv1d = nn.Conv1d(768,10,1)
-#         self.linear1 = nn.Linear(768,2)
 
 
-# class AlbertQa(nn.Module):
-#     def __init__(self, albert_path):
-#         super(AlbertQa, self).__init__()
-#         self.albert_path = albert_path
-#         self.model = transformers.AlbertModel.from_pretrained(self.albert_path)
-#         self.linear = nn.Linear(128,2)
 
-#     def forward(self, ids, mask_id, token_type_id):
-#         sequence_output, pooled_output = self.model(ids, mask_id, token_type_id)
+class AlbertQa(nn.Module):
+    def __init__(self, albert_path):
+        super(AlbertQa, self).__init__()
+        self.albert_path = albert_path
+        self.model = transformers.AlbertModel.from_pretrained(self.albert_path)
+        self.linear = nn.Linear(768,2)
 
-#         logits = self.linear(sequence_output)
-#         start_logit, end_logit = torch.split(logits, 1, dim=1)
-#         start_logit = start_logit.squeeze(dim=1)
-#         end_logit = end_logit.squeeze(dim=1)
+    def forward(self, ids, mask_id, token_type_id):
+        sequence_output, pooled_output = self.model(ids, mask_id, token_type_id)
 
-#         return start_logit, end_logit
+        logits = self.linear(sequence_output)
+        start_logit, end_logit = torch.split(logits, 1, dim=-1)
+        start_logit = start_logit.squeeze(dim=-1)
+        end_logit = end_logit.squeeze(dim=-1)
+
+        return start_logit, end_logit

@@ -63,9 +63,9 @@ class TweetDataset:
             token_out = self.tokenizer.encode(text)
             ids = token_out[0]
             offsets = token_out[1]
-            token_type_ids = len(1) * 1
-            mask_ids = len(token_out) * 1
-
+            token_type_ids = len(ids) * [1]
+            mask_ids = len(ids) * [1]
+            
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
     
         targets_idx = []
@@ -109,7 +109,7 @@ class TweetDataset:
             ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
             token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
             mask_ids = [1] * 3 + mask_ids + [1]
-            offset = [(0,0)] * 3 + offsets + [(0,0)]
+            offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
         elif self.model_type == 'albert':
             target_start_idx[targets_idx[0]+3] = 1
@@ -118,7 +118,7 @@ class TweetDataset:
             ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
             token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
             mask_ids = [1] * 3 + mask_ids + [1]
-            offset = [(0,0)] * 3 + offsets + [(0,0)]
+            offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
 
