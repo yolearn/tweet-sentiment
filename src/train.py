@@ -64,20 +64,29 @@ def run(cv):
             #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
             #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
-            print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
-            earlystop(cur_score, model, i+1, pred1, pred2)
+            print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
+            print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
+            print(f"Train {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
+            print(f"Train {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
+            
+            earlystop(cur_score['avg_score'], model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
                 break
 
+    if config.SPLIT_TYPE != 'pure_split':
         start_preds[val_idx] = earlystop.pred1
         end_preds[val_idx] = earlystop.pred2
-        score.append(earlystop.max)
+
+
+    score.append(earlystop.max)
                   
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))
-    preds = np.concatenate([start_preds, end_preds], axis=1)
-    pd.DataFrame(preds).to_csv(f'../output/validation/cv.csv', index=False)   
+
+    if config.SPLIT_TYPE != 'pure_split':
+        preds = np.concatenate([start_preds, end_preds], axis=1)
+        pd.DataFrame(preds).to_csv(f'../output/validation/cv.csv', index=False)   
 
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
@@ -95,17 +104,13 @@ if __name__ == '__main__':
     # args = dict(vars(args))
 
     set_seed()
-    df = pd.read_csv(config.TRAIN_FILE).dropna()
-    df = df[df.sentiment != 'neutral']
+    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)
+    #df = df[df.sentiment != 'neutral']
     df['text'] = df['text'].astype(str)
     df['selected_text'] = df['selected_text'].astype(str)
     cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)
+    
     run(cv)
 
-    #model_save
-    if False:
-        for file_name in os.listdir("../model"):
-            local_file = os.path.join("../model", file_name)
-            upload_to_aws(local_file, config.BUCKET_NAME, file_name)
-       
+
     

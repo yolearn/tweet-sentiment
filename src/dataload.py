@@ -2,6 +2,8 @@ import torch
 import transformers
 import numpy as np
 import pandas as pd
+from config import SentencePieceTokenizer
+import sentencepiece_pb2
 
 class TweetDataset:
     def __init__(self, text, selected_text, sentiment, tokenizer, max_len, model_type):
@@ -57,6 +59,13 @@ class TweetDataset:
             offsets = token_out.offsets 
             mask_ids = token_out.attention_mask
 
+        elif self.model_type == 'albert':
+            token_out = self.tokenizer.encode(text)
+            ids = token_out[0]
+            offsets = token_out[1]
+            token_type_ids = len(1) * 1
+            mask_ids = len(token_out) * 1
+
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
     
         targets_idx = []
@@ -67,8 +76,7 @@ class TweetDataset:
         target_start_idx = np.zeros(self.max_len)
         target_end_idx = np.zeros(self.max_len)
         # Due to [CLS]+1
-        target_start_idx[targets_idx[0]+4] = 1
-        target_end_idx[targets_idx[-1]+4] = 1
+
         
         """
         Robert
@@ -78,16 +86,39 @@ class TweetDataset:
         Bert
         - single input : [CLS] X [SEP]
         - pair input : [CLS] X [SEP] Y [SEP]
+        
+        Albert
+        - single input : [CLS] X [SEP]
+        - pair input : [CLS] X [SEP] Y [SEP]
         """
+        
 
         if self.model_type == 'roberta':
+            target_start_idx[targets_idx[0]+4] = 1
+            target_end_idx[targets_idx[-1]+4] = 1
+
             ids = [0] + [sentiment_d[sentiment]] + [2] +[2] + ids + [2]
             token_type_ids = [0] * 4 + token_type_ids + [0]
             mask_ids = [1] * 4 + mask_ids + [1]
             offsets = [(0,0)] * 4 + offsets + [(0,0)]
         
         elif self.model_type == 'bert':
-            pass
+            target_start_idx[targets_idx[0]+3] = 1
+            target_end_idx[targets_idx[-1]+3] = 1
+
+            ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
+            token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
+            mask_ids = [1] * 3 + mask_ids + [1]
+            offset = [(0,0)] * 3 + offsets + [(0,0)]
+
+        elif self.model_type == 'albert':
+            target_start_idx[targets_idx[0]+3] = 1
+            target_end_idx[targets_idx[-1]+3] = 1
+
+            ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
+            token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
+            mask_ids = [1] * 3 + mask_ids + [1]
+            offset = [(0,0)] * 3 + offsets + [(0,0)]
 
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
 

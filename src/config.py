@@ -3,12 +3,30 @@ import os
 import pandas as pd
 import torch
 import transformers
+import sentencepiece_pb2
+import sentencepiece as spm
+import os
+import sentencepiece_pb2
+
+class SentencePieceTokenizer:
+    def __init__(self, model_path):
+        self.sp = spm.SentencePieceProcessor()
+        self.sp.load(model_path)
+    
+    def encode(self, sentence):
+        spt = sentencepiece_pb2.SentencePieceText()
+        spt.ParseFromString(self.sp.encode_as_serialized_proto(sentence))
+        offsets = []
+        tokens = []
+        for piece in spt.pieces:
+            tokens.append(piece.id)
+            offsets.append((piece.begin, piece.end))
+        return tokens, offsets
+
 #from train import args
 #from train import args
 #CUDA_VISIBLE_DEVICES=1 
 
-TRAIN_FILE = "../input/train.csv"
-SEED = 42
 # TRAIN_FILE = args['TRAIN_FILE']
 # NFOLDS = args['nfolds']
 # SHUFFLE = True
@@ -20,11 +38,14 @@ SEED = 42
 # DROPOUT_RATE = args['dropout_rate']
 # PATIENCE = args['patience']
 
+TRAIN_FILE = "../input/train.csv"
+SEED = 42
 NFOLDS = 5
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
+#SPLIT_TYPE = 'pure_split'
 MAX_LEN = 95
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 EPOCH = 10
 LR = 3e-5
 DROPOUT_RATE = 0.2
@@ -53,7 +74,13 @@ elif MODEL_TYPE == 'roberta':
     #roberta-base
     #roberta-large
     MODEL_PATH = 'roberta-base'
-    
+
+elif MODEL_TYPE == 'albert':
+    MODEL_PATH = 'albert-base-v2'
+    #ALBERT_TOKENIZER = transformers.ALBERT_TOKENIZER(MODEL_PATH)
+    Seq_tokenizer = SentencePieceTokenizer('../input/spiece.model')
+    TOKENIZER =  Seq_tokenizer  
+
 
 
 if torch.cuda.is_available():

@@ -210,6 +210,7 @@ def eval_loop_fn(data_loader, model, device, df_type):
 
 
 def pred_loop_fn(data_loader, device):
+    
     fin_output_start = []
     fin_output_end = []
     fin_offset = []
@@ -218,6 +219,8 @@ def pred_loop_fn(data_loader, device):
     fin_orig_text = []
 
     tk = tqdm(data_loader, total=len(data_loader))
+    fin_output_string = []
+
     for bi, d in enumerate(tk):
         ids = d['ids']
         mask_ids = d['mask_ids']
@@ -244,18 +247,18 @@ def pred_loop_fn(data_loader, device):
             output_start = softmax(output_start.cpu().detach().numpy(), axis=1)
             output_end = softmax(output_end.cpu().detach().numpy(), axis=1)
             
+
             fin_output_start.append(output_start)
             fin_output_end.append(output_end)
             fin_offset.append(offsets)
             fin_orig_sentiment.extend(orig_sentiment)
             fin_orig_text.extend(orig_text)
-    
+
     fin_output_start = np.vstack(fin_output_start)
     fin_output_end = np.vstack(fin_output_end)
     fin_offset = np.vstack(fin_offset)
 
-    fin_output_string = []
-    for i in range(output_start.shape[0]):
+    for i in range(fin_output_start.shape[0]):
         output_start = fin_output_start[i]
         output_start = np.argmax(output_start)
         output_end = fin_output_end[i]
@@ -272,7 +275,10 @@ def pred_loop_fn(data_loader, device):
             output_string += orig_text[offset[j][0]:offset[j][1]]
             #if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
             #    final_output += " "
-    
+
+        if orig_sentiment == 'neutral':
+            output_string = orig_text
+
         fin_output_string.append(output_string)
 
     return fin_output_string

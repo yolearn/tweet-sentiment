@@ -45,13 +45,14 @@ def predict(df):
     ) 
 
     preds = pred_loop_fn(test_data_loader, config.DEVICE)
-
+    return preds
 
 if __name__ == '__main__':
 
-    test_df = pd.read_csv("../input/test.csv")[:100]
+    test_df = pd.read_csv("../input/test.csv")
     test_df.loc[:, "selected_text"] = test_df.loc[:, 'text']
     sample_submission = pd.read_csv("../input/sample_submission.csv")
     preds = predict(test_df)
+
     sample_submission.loc[:, "selected_text"] = preds
     sample_submission.to_csv('../output/submission/output.csv', index=False)
