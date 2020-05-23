@@ -24,57 +24,59 @@ class SentencePieceTokenizer:
             offsets.append((piece.begin, piece.end))
         return tokens, offsets
 
-#from train import args
-#from train import args
-#CUDA_VISIBLE_DEVICES=1 
+ 
+MODEL_NAME = 'roberta-base-squad2_baseline'
+if not os.path.exists(f'../model/{MODEL_NAME}'):
+    os.makedirs(f'../model/{MODEL_NAME}')
 
-# TRAIN_FILE = args['TRAIN_FILE']
-# NFOLDS = args['nfolds']
-# SHUFFLE = True
-# SPLIT_TYPE = args['split_type']
-# MAX_LEN = args['max_len']
-# BATCH_SIZE = args['batch_size']
-# EPOCH = args['epoch']
-# LR = args['lr']
-# DROPOUT_RATE = args['dropout_rate']
-# PATIENCE = args['patience']
-
+SAVE_MODEL = True
+TRN_NUM = None
 TRAIN_FILE = "../input/train.csv"
 SEED = 42
 NFOLDS = 5
 SHUFFLE = True
 SPLIT_TYPE = 'kfold'
 #SPLIT_TYPE = 'pure_split'
-MAX_LEN = 128
+MAX_LEN =  128
 BATCH_SIZE = 32
-EPOCH = 10
+EPOCH = 5
 LR = 3e-5
 DROPOUT_RATE = 0.2
 PATIENCE = 3
 
-MODEL_TYPE = 'albert'
+
+# MODEL_TYPE = 'albert'
+MODEL_TYPE = "roberta"
+#MODEL_TYPE = "bert"
 BUCKET_NAME = "kaggletweet"
+
 
 # = '../model/model.pth'
 
 if MODEL_TYPE == 'bert':
     BERT_TOKENIZER = tokenizers.BertWordPieceTokenizer(
         "../input/vocab.txt",
-        lowercase=True
+        lowercase=True,
     )
     TOKENIZER = BERT_TOKENIZER
-    MODEL_PATH = 'bert-base-uncased'
+    #bert-base-uncased
+    #bert-large-uncased
+    #bert-large-uncased-whole-word-masking-finetuned-squad
+    MODEL_PATH = 'bert-large-uncased'
 
 elif MODEL_TYPE == 'roberta':
     ROBERT_TOKENIZER = tokenizers.ByteLevelBPETokenizer(
-        vocab_file="../input/vocab.json",
-        merges_file="../input/merges.txt",
-        lowercase=False
+        vocab_file="../input/roberta-base-squad2/vocab.json",
+        merges_file="../input/roberta-base-squad2/merges.txt",
+        lowercase=True,
+        add_prefix_space=True
     )
     TOKENIZER = ROBERT_TOKENIZER
     #roberta-base
     #roberta-large
-    MODEL_PATH = 'roberta-base'
+    #roberta-base-squad2
+    MODEL_PATH = '../input/roberta-base-squad2'
+    MODEL_CONF = '../input/roberta-base-squad2/config.json'
 
 elif MODEL_TYPE == 'albert':
     MODEL_PATH = 'albert-base-v2'
@@ -103,19 +105,21 @@ if __name__ == "__main__":
     # # #download robert tokenizer file
     # robert_tokenizer = transformers.RobertaTokenizer.from_pretrained(ROBERT_PATH)
     # robert_tokenizer.save_vocabulary("../input/")
-
-    out = TOKENIZER.encode("87 charlie don't understand anything")
-    print(out.offsets)
-    print(out.tokens)
-    text = "87 charlie don't understand anything"
-    offsets = out.offsets
-    start_idx = 3
-    end_idx = 5
-
-    fin = ''
-    for i in range(start_idx+1, end_idx+2):
-        fin+=text[offsets[i][0]:offsets[i][1]]
-    
-    print(fin)
+    pass
 
 
+
+#from train import args
+#from train import args
+#CUDA_VISIBLE_DEVICES=1 
+
+# TRAIN_FILE = args['TRAIN_FILE']
+# NFOLDS = args['nfolds']
+# SHUFFLE = True
+# SPLIT_TYPE = args['split_type']
+# MAX_LEN = args['max_len']
+# BATCH_SIZE = args['batch_size']
+# EPOCH = args['epoch']
+# LR = args['lr']
+# DROPOUT_RATE = args['dropout_rate']
+# PATIENCE = args['patience']

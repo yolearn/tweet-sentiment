@@ -12,6 +12,7 @@ from cross_val import CrossValidation
 import torch.nn as nn
 from utils import upload_to_aws, EarlyStopping, set_seed
 import time
+import transformers
 
 def run(cv):
     score = []
@@ -21,18 +22,17 @@ def run(cv):
     for fold, (trn_idx, val_idx) in enumerate(cv.split()):
         trn_df = df.iloc[trn_idx]
         val_df = df.iloc[val_idx]
+        print(f'Initial ....  {config.MODEL_PATH}')
         if config.MODEL_TYPE == 'bert':
-            print('Initial Bert.....')
-            bert_model = BertUncasedQa(config.BERT_PATH).to(config.DEVICE)
-            model = robert_model
+            bert_model = BertUncasedQa(config.MODEL_PATH).to(config.DEVICE)
+            model = bert_model
 
-        elif config.MODEL_TYPE == 'robert':
-            print('Initial Robert.....')
-            robert_model = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
+        elif config.MODEL_TYPE == 'roberta':
+            roberta_conf = transformers.RobertaConfig.from_pretrained(config.MODEL_CONF)
+            robert_model = RobertUncaseQa(config.MODEL_PATH, roberta_conf).to(config.DEVICE)
             model = robert_model
 
         elif config.MODEL_TYPE == 'albert':
-            print('Initial Alert.....')
             albert_model = AlbertQa(config.MODEL_PATH).to(config.DEVICE)
             model = albert_model
 
@@ -67,7 +67,7 @@ def run(cv):
             batch_size = config.BATCH_SIZE
         ) 
 
-        model_pth = f'../model/model_fold{fold+1}.pth'
+        model_pth = f'../model/{config.MODEL_NAME}/fold{fold+1}.pth'
         earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
    
         for i in range(config.EPOCH):       
@@ -76,10 +76,12 @@ def run(cv):
             #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
             print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
+            #print(f"Train {i+1} EPOCH : AVG ACCURACY      = {accuracy}")
             print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
             print(f"Train {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
             print(f"Train {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
             
+
             earlystop(cur_score['avg_score'], model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
@@ -91,15 +93,13 @@ def run(cv):
         start_preds[val_idx] = earlystop.pred1
         end_preds[val_idx] = earlystop.pred2
 
-
         
-                  
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))
 
     if config.SPLIT_TYPE != 'pure_split':
-        preds = np.concatenate([start_preds, end_preds], axis=1)
-        pd.DataFrame(preds).to_csv(f'../output/validation/cv.csv', index=False)   
+        cv_preds = np.concatenate([start_preds, end_preds], axis=1)
+        pd.DataFrame(cv_preds).to_csv(f'../output/validation/{config.MODEL_NAME}_cv.csv', index=False)   
 
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # args = dict(vars(args))
 
     set_seed()
-    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)
+    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)[:config.TRN_NUM]
     #df = df[df.sentiment != 'neutral']
     df['text'] = df['text'].astype(str)
     df['selected_text'] = df['selected_text'].astype(str)

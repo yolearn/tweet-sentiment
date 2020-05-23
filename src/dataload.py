@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from config import SentencePieceTokenizer
 import sentencepiece_pb2
+import config
 
 class TweetDataset:
     def __init__(self, text, selected_text, sentiment, tokenizer, max_len, model_type):
@@ -22,13 +23,6 @@ class TweetDataset:
         text = " ".join(str(self.text[item]).split())
         selected_text = " ".join(str(self.selected_text[item]).split())
         sentiment = self.sentiment[item]
-
-
-        sentiment_d = {
-            'positive': 1313,
-            'negative': 2430,
-            'neutral': 7974
-        }
 
         len_sel_text = len(selected_text)
         char_start_idx = None 
@@ -52,12 +46,24 @@ class TweetDataset:
             offsets = token_out.offsets 
             mask_ids = token_out.attention_mask
 
+            sentiment_d = {
+                'positive': 1313,
+                'negative': 2430,
+                'neutral': 7974
+            }
+
         elif self.model_type == 'bert':
             token_out = self.tokenizer.encode(text)
-            ids = token_out.ids 
-            token_type_ids = token_out.type_ids 
-            offsets = token_out.offsets 
-            mask_ids = token_out.attention_mask
+            ids = token_out.ids[1:-1]
+            token_type_ids = token_out.type_ids[1:-1] 
+            offsets = token_out.offsets[1:-1] 
+            mask_ids = token_out.attention_mask[1:-1]
+
+            sentiment_d = {
+                'positive': 3893,
+                'negative': 4997,
+                'neutral': 8699
+            }
 
         elif self.model_type == 'albert':
             token_out = self.tokenizer.encode(text)
@@ -66,6 +72,13 @@ class TweetDataset:
             token_type_ids = len(ids) * [1]
             mask_ids = len(ids) * [1]
             
+            sentiment_d = {
+                'positive': 2221,
+                'negative': 3682,
+                'neutral': 8387
+            }
+
+
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
     
         targets_idx = []
@@ -106,8 +119,8 @@ class TweetDataset:
             target_start_idx[targets_idx[0]+3] = 1
             target_end_idx[targets_idx[-1]+3] = 1
 
-            ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
-            token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
+            ids = [101] + [sentiment_d[sentiment]] + [102] + ids + [102]
+            token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]
             mask_ids = [1] * 3 + mask_ids + [1]
             offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
@@ -115,8 +128,8 @@ class TweetDataset:
             target_start_idx[targets_idx[0]+3] = 1
             target_end_idx[targets_idx[-1]+3] = 1
 
-            ids = [103] + [sentiment_d[sentiment]] + [104] + ids + [104]
-            token_type_ids = [0] * 3 + [0] * len(token_type_ids) + [1]
+            ids = [2] + [sentiment_d[sentiment]] + [3] + ids + [3]
+            token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]
             mask_ids = [1] * 3 + mask_ids + [1]
             offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
@@ -129,6 +142,13 @@ class TweetDataset:
             mask_ids = mask_ids + [0] * padding_len
             offsets = offsets + [(0,0)] * padding_len
 
+        if sentiment == 'positive':
+            targ_sentiment = 0
+        elif sentiment == 'negative':
+            targ_sentiment = 1
+        elif sentiment == 'neutral':
+            targ_sentiment = 2
+
         return {
             'ids' : torch.tensor(ids, dtype=torch.long),
             'mask_ids' : torch.tensor(mask_ids, dtype=torch.long),
@@ -139,44 +159,29 @@ class TweetDataset:
             'orig_sentiment' : sentiment,
             'orig_sele_text' : selected_text,
             'orig_text' : text,
+            'targ_sentiment' : torch.tensor(targ_sentiment, dtype=torch.long)
         }
 
 
 
 if __name__ == "__main__":
     trn_df = pd.read_csv(config.TRAIN_FILE)
-    test_df = pd.read_csv("../input/test.csv")
-    test_df['selected_text'] = 'temp'
+    
+    # test_df = pd.read_csv("../input/test.csv")
+    # test_df['selected_text'] = 'temp'
 
-    # dataset = TweetDataset(trn_df['text'].values, 
-    #                     trn_df['selected_text'].values, 
-    #                     trn_df['sentiment'].values, 
-    #                     TOKENIZER, 
-    #                     MAX_LEN
-    #                 )
-
-    # dataset = TweetDataset(test_df['text'].values, 
-    #                 test_df['selected_text'].values, 
-    #                 test_df['sentiment'].values, 
-    #                 TOKENIZER, 
-    #                 MAX_LEN
-    #             )
-    # print(dataset[0]['offset'].shape)
-    # print(dataset[1]['offset'].shape)
-    # print(dataset[2]['offset'].shape)
-    # for i in range(1000):
-    #     print(dataset[i]['origin_sentiment'])
-
-    trn_df = trn_df[trn_df['sentiment']=='positive']
+    # trn_df = trn_df[trn_df['sentiment']=='positive']
 
     dataset = TweetDataset(trn_df['text'].values, 
                     trn_df['selected_text'].values, 
                     trn_df['sentiment'].values, 
                     config.TOKENIZER, 
                     config.MAX_LEN,
-                    'roberta'
+                    config.MODEL_TYPE
                 )            
     
     print(dataset[0])
 
+    
+ 
 
