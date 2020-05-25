@@ -6,7 +6,8 @@ import transformers
 import sentencepiece_pb2
 import sentencepiece as spm
 import os
-import sentencepiece_pb2
+
+SAVE_MODEL = False
 
 """
 class SentencePieceTokenizer:

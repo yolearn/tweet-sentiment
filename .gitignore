@@ -134,4 +134,4 @@ dmypy.json
 #folder
 model/
 input/
-src/utils.py
+src/aws_setting.py

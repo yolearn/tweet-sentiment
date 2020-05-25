@@ -163,7 +163,6 @@ class TweetDataset:
         }
 
 
-
 if __name__ == "__main__":
     trn_df = pd.read_csv(config.TRAIN_FILE)
     trn_df['text'] = trn_df['text'].apply(lambda x:clean_text(x))

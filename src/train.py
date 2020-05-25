@@ -32,13 +32,15 @@ def run(cv):
 
         print(f"Initial ....{args['MODEL_VERSION']}")
         if args['MODEL_TYPE'] == 'bert':
-            model = BertUncasedQa(MODEL_PATH).to(args['DEVICE'])
+            model_conf = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
+            model = BertUncasedQa(MODEL_PATH, model_conf).to(args['DEVICE'])
 
         elif args['MODEL_TYPE'] == 'roberta':
-            roberta_conf = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
-            model = RobertUncaseQa(MODEL_PATH, roberta_conf).to(args['DEVICE'])
+            model_conf = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
+            model = RobertUncaseQa(MODEL_PATH, model_conf).to(args['DEVICE'])
             
         elif args['MODEL_TYPE'] == 'albert':
+            model_conf = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
             model = AlbertQa(MODEL_PATH).to(args['DEVICE'])
 
         model = nn.DataParallel(model)
@@ -108,22 +110,23 @@ def run(cv):
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
     parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
-    parser.add_argument('--BATCH_SIZE', default=16)
+    parser.add_argument('--BATCH_SIZE', default=16, type=int)
     parser.add_argument('--MODEL_TYPE', default='roberta')
     parser.add_argument('--MODEL_VERSION', default='roberta-base')
-    parser.add_argument('--MAX_LEN', default=128)
-    parser.add_argument('--EPOCH', default=1)
-    parser.add_argument('--LR', default=3e-5)
-    parser.add_argument('--NFOLDS', default=5)
+    parser.add_argument('--MAX_LEN', default=128, type=int)
+    parser.add_argument('--EPOCH', default=1, type=int)
+    parser.add_argument('--LR', default=3e-5, type=int)
+    parser.add_argument('--NFOLDS', default=5, type=int)
     parser.add_argument('--SPLIT_TYPE', default='kfold')         #kfold, pure_split
-    parser.add_argument('--PATIENCE', default=1)
-    parser.add_argument('--TRAIN_NUM', default=None)
+    parser.add_argument('--PATIENCE', default=1, type=int)
+    parser.add_argument('--TRAIN_NUM', default=1000, type=int)
     parser.add_argument('--DIR', default="..")
-    parser.add_argument('--SEED', default=42)
+    parser.add_argument('--SEED', default=42, type=int)
     parser.add_argument('--DEVICE', default=torch.device('cuda'))   #cpu          
     parser.add_argument('--SHUFFLE', default=True)
     parser.add_argument('--PRE_CLEAN', default=False)
     parser.add_argument('--MODEL_NAME', default='baseline')
+    parser.add_argument('--embedding_size', default=768, type=int)
 
     args = parser.parse_args()
     args = dict(vars(args))
@@ -133,6 +136,9 @@ if __name__ == '__main__':
         f"{args['DIR']}/input/vocab.txt",
         lowercase=True,
     )
+        MODEL_PATH = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/'
+        MODEL_CONF = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/config.json' 
+    
     elif args['MODEL_TYPE'] == 'roberta':
         TOKENIZER = tokenizers.ByteLevelBPETokenizer(
         vocab_file=f"{args['DIR']}/input/roberta-base-squad2/vocab.json",
