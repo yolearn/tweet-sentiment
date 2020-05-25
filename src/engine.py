@@ -4,8 +4,6 @@ import numpy as np
 import string
 from utils import jaccard, AverageMeter, cal_jaccard, load_model, cal_accucary
 from tqdm import tqdm
-import config
-import time 
 import time
 from scipy.special import softmax
 
@@ -63,7 +61,7 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         
 
         optimzer.zero_grad()
-        o1, o2, o3 = model(ids, mask_ids, token_type_ids)
+        o1, o2 = model(ids, mask_ids, token_type_ids)
         bcw_loss = BcwLoss(o1, o2, target_start_idx, target_end_idx)
         #entropy_loss = EntropyLoss(o3, targ_sentiment)
         loss = loss_fn(bcw_loss)
@@ -105,10 +103,10 @@ def eval_loop_fn(data_loader, model, device, df_type):
             target_end_idx = target_end_idx.to(device, dtype=torch.float)
             targ_sentiment = targ_sentiment.to(device, dtype=torch.long)
 
-            o1, o2, o3= model(ids, mask_ids, token_type_ids)
-            fin_output_start.append(torch.softmax(o1, axis=1).cpu().detach().numpy())
-            fin_output_end.append(torch.softmax(o2, axis=1).cpu().detach().numpy())
-            fin_output_sentiment.append(torch.softmax(o3, axis=1).cpu().detach().numpy())
+            o1, o2 = model(ids, mask_ids, token_type_ids)
+            fin_output_start.append(o1.cpu().detach().numpy())
+            fin_output_end.append(o2.cpu().detach().numpy())
+            #fin_output_sentiment.append(torch.softmax(o3, axis=1).cpu().detach().numpy())
 
             fin_offset.append(offsets)
             fin_orig_sentiment.extend(orig_sentiment)
@@ -119,7 +117,7 @@ def eval_loop_fn(data_loader, model, device, df_type):
     fin_output_start = np.vstack(fin_output_start)
     fin_output_end = np.vstack(fin_output_end)
     fin_offset = np.vstack(fin_offset)
-    fin_output_sentiment = np.vstack(fin_output_sentiment)
+    #fin_output_sentiment = np.vstack(fin_output_sentiment)
     fin_targ_sentiment = np.concatenate(fin_targ_sentiment)
     
 

@@ -42,11 +42,11 @@ class RobertUncaseQa(transformers.BertPreTrainedModel):
         self.model = transformers.RobertaModel.from_pretrained(self.robert_path, config=conf)
         #self.bert_drop = nn.Dropout(config.DROPOUT_RATE)
         self.linear1 = nn.Linear(768,2)
-        self.linear2 = nn.Linear(768,1)
+        # self.linear2 = nn.Linear(768,1)
         nn.init.normal_(self.linear1.weight, std=0.02)
         nn.init.normal_(self.linear1.bias, 0)
-        self.linear3 = nn.Linear(128,3)
-        #self.softmax = nn.Softmax()
+        # self.linear3 = nn.Linear(128,3)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, ids, mask_id, token_type_id):
         """
@@ -60,13 +60,15 @@ class RobertUncaseQa(transformers.BertPreTrainedModel):
         start_logit, end_logit = torch.split(logits, 1, dim=-1)
         start_logit = start_logit.squeeze(-1)
         end_logit = end_logit.squeeze(-1)
+        start_logit = self.softmax(start_logit)
+        end_logit = self.softmax(end_logit)
 
-        class_logit = self.linear2(sequence_output)
-        class_logit = class_logit.view(class_logit.size(0), -1)
-        class_logit = self.linear3(class_logit)
-        class_logit = class_logit.squeeze(-1)
+        # class_logit = self.linear2(sequence_output)
+        # class_logit = class_logit.view(class_logit.size(0), -1)
+        # class_logit = self.linear3(class_logit)
+        # class_logit = class_logit.squeeze(-1)
         
-        return start_logit, end_logit, class_logit
+        return start_logit, end_logit
 
 
 class AlbertQa(nn.Module):

@@ -2,9 +2,9 @@ import torch
 import transformers
 import numpy as np
 import pandas as pd
-from config import SentencePieceTokenizer
+from utils import SentencePieceTokenizer, clean_text
 import sentencepiece_pb2
-import config
+
 
 class TweetDataset:
     def __init__(self, text, selected_text, sentiment, tokenizer, max_len, model_type):
@@ -32,8 +32,8 @@ class TweetDataset:
             if text[i:i+len_sel_text] == selected_text and text[i] == selected_text[0]:
                 char_start_idx = i 
                 char_end_idx = i+len_sel_text
-
         char_targets = np.zeros(len(text))
+
         for i in range(char_start_idx, char_end_idx):
             if text[i] != ' ':
                 char_targets[i] = 1
@@ -166,7 +166,8 @@ class TweetDataset:
 
 if __name__ == "__main__":
     trn_df = pd.read_csv(config.TRAIN_FILE)
-    
+    trn_df['text'] = trn_df['text'].apply(lambda x:clean_text(x))
+    trn_df['selected_text'] = trn_df['selected_text'].apply(lambda x:clean_text(x))
     # test_df = pd.read_csv("../input/test.csv")
     # test_df['selected_text'] = 'temp'
 
@@ -180,7 +181,11 @@ if __name__ == "__main__":
                     config.MODEL_TYPE
                 )            
     
-    print(dataset[0])
+    for i in range(len(trn_df)):
+        try:
+            dataset[i]
+        except:
+            print(i)
 
     
  

@@ -8,7 +8,7 @@ import sentencepiece as spm
 import os
 import sentencepiece_pb2
 
-
+"""
 class SentencePieceTokenizer:
     def __init__(self, model_path):
         self.sp = spm.SentencePieceProcessor()
@@ -29,7 +29,8 @@ MODEL_NAME = 'roberta-base-squad2_baseline'
 if not os.path.exists(f'../model/{MODEL_NAME}'):
     os.makedirs(f'../model/{MODEL_NAME}')
 
-SAVE_MODEL = True
+SAVE_MODEL = False
+PRE_CLEAN = False
 TRN_NUM = None
 TRAIN_FILE = "../input/train.csv"
 SEED = 42
@@ -39,10 +40,10 @@ SPLIT_TYPE = 'kfold'
 #SPLIT_TYPE = 'pure_split'
 MAX_LEN =  128
 BATCH_SIZE = 32
-EPOCH = 5
+EPOCH = 1
 LR = 3e-5
-DROPOUT_RATE = 0.2
-PATIENCE = 3
+#DROPOUT_RATE = 0.2
+PATIENCE = 1
 
 
 # MODEL_TYPE = 'albert'
@@ -75,8 +76,8 @@ elif MODEL_TYPE == 'roberta':
     #roberta-base
     #roberta-large
     #roberta-base-squad2
-    MODEL_PATH = '../input/roberta-base-squad2'
-    MODEL_CONF = '../input/roberta-base-squad2/config.json'
+    MODEL_PATH = '../input/roberta-base/'
+    MODEL_CONF = '../input/roberta-base/config.json'
 
 elif MODEL_TYPE == 'albert':
     MODEL_PATH = 'albert-base-v2'
@@ -123,3 +124,4 @@ if __name__ == "__main__":
 # LR = args['lr']
 # DROPOUT_RATE = args['dropout_rate']
 # PATIENCE = args['patience']
+"""

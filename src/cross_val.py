@@ -14,7 +14,7 @@ class CrossValidation:
         self.nfolds = nfolds
         self.shuffle = shuffle
         self.trn_rate = trn_rate
-
+    
     def split(self):
         if self.split_type == 'kfold':
             kf = KFold(n_splits=self.nfolds, shuffle=self.shuffle)

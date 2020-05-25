@@ -7,74 +7,79 @@ from dataload import TweetDataset
 from sklearn import model_selection
 from model import BertUncasedQa, RobertUncaseQa, AlbertQa
 from transformers import AdamW
-import config
+
 from cross_val import CrossValidation
 import torch.nn as nn
-from utils import upload_to_aws, EarlyStopping, set_seed
+from utils import upload_to_aws, EarlyStopping, set_seed, clean_text
 import time
 import transformers
+import tokenizers
 
 def run(cv):
     score = []
-    start_preds = np.zeros((df.shape[0], config.MAX_LEN))
-    end_preds = np.zeros((df.shape[0], config.MAX_LEN))
+    start_preds = np.zeros((df.shape[0], args['MAX_LEN']))
+    end_preds = np.zeros((df.shape[0], args['MAX_LEN']))
     
     for fold, (trn_idx, val_idx) in enumerate(cv.split()):
         trn_df = df.iloc[trn_idx]
+        if args['PRE_CLEAN']:
+            print('cleaning......')
+            trn_df['text'] = trn_df['text'].apply(lambda x:clean_text(x))
+            trn_df['selected_text'] = trn_df['selected_text'].apply(lambda x:clean_text(x))
+
         val_df = df.iloc[val_idx]
-        print(f'Initial ....  {config.MODEL_PATH}')
-        if config.MODEL_TYPE == 'bert':
-            bert_model = BertUncasedQa(config.MODEL_PATH).to(config.DEVICE)
-            model = bert_model
 
-        elif config.MODEL_TYPE == 'roberta':
-            roberta_conf = transformers.RobertaConfig.from_pretrained(config.MODEL_CONF)
-            robert_model = RobertUncaseQa(config.MODEL_PATH, roberta_conf).to(config.DEVICE)
-            model = robert_model
 
-        elif config.MODEL_TYPE == 'albert':
-            albert_model = AlbertQa(config.MODEL_PATH).to(config.DEVICE)
-            model = albert_model
+        print(f"Initial ....{args['MODEL_VERSION']}")
+        if args['MODEL_TYPE'] == 'bert':
+            model = BertUncasedQa(MODEL_PATH).to(args['DEVICE'])
+
+        elif args['MODEL_TYPE'] == 'roberta':
+            roberta_conf = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
+            model = RobertUncaseQa(MODEL_PATH, roberta_conf).to(args['DEVICE'])
+            
+        elif args['MODEL_TYPE'] == 'albert':
+            model = AlbertQa(MODEL_PATH).to(args['DEVICE'])
 
         model = nn.DataParallel(model)
-        optimzer = AdamW(model.parameters(), lr=config.LR)
+        optimzer = AdamW(model.parameters(), lr=args['LR'])
 
         trn_dataset = TweetDataset(
             text=trn_df['text'].values,
             selected_text=trn_df['selected_text'].values,
             sentiment=trn_df['sentiment'].values,
-            tokenizer=config.TOKENIZER,
-            max_len=config.MAX_LEN,
-            model_type=config.MODEL_TYPE
+            tokenizer=TOKENIZER,
+            max_len=args['MAX_LEN'],
+            model_type=args['MODEL_TYPE']
         )
 
         val_dataset = TweetDataset(
             text=val_df['text'].values,
             selected_text=val_df['selected_text'].values,
             sentiment=val_df['sentiment'].values,
-            tokenizer=config.TOKENIZER,
-            max_len=config.MAX_LEN,
-            model_type=config.MODEL_TYPE
+            tokenizer=TOKENIZER,
+            max_len=args['MAX_LEN'],
+            model_type=args['MODEL_TYPE']
         )
 
         trn_data_loader = torch.utils.data.DataLoader(
             dataset = trn_dataset, 
-            batch_size = config.BATCH_SIZE
+            batch_size = args['BATCH_SIZE']
         )   
 
         val_data_loader = torch.utils.data.DataLoader(
             dataset = val_dataset, 
-            batch_size = config.BATCH_SIZE
+            batch_size = args['BATCH_SIZE']
         ) 
 
-        model_pth = f'../model/{config.MODEL_NAME}/fold{fold+1}.pth'
-        earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
+        model_pth = f'{args["DIR"]}/model/{args["MODEL_NAME"]}/fold{fold+1}.pth'
+        earlystop = EarlyStopping(path=model_pth, patience=args['PATIENCE'])
    
-        for i in range(config.EPOCH):       
-            trn_loop_fn(trn_data_loader, model, optimzer, config.DEVICE)
+        for i in range(args['EPOCH']):       
+            trn_loop_fn(trn_data_loader, model, optimzer, args['DEVICE'])
             #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
             #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
-            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
+            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, args['DEVICE'], 'val')
             print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
             #print(f"Train {i+1} EPOCH : AVG ACCURACY      = {accuracy}")
             print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
@@ -89,39 +94,69 @@ def run(cv):
 
         score.append(earlystop.max)
 
-    if config.SPLIT_TYPE != 'pure_split':
-        start_preds[val_idx] = earlystop.pred1
-        end_preds[val_idx] = earlystop.pred2
-
-        
+        if args['SPLIT_TYPE'] != 'pure_split':
+            start_preds[val_idx] = earlystop.pred1
+            end_preds[val_idx] = earlystop.pred2
+    
     print("cv score : ", score)
     print("average cv score : ", sum(score) / len(score))
 
-    if config.SPLIT_TYPE != 'pure_split':
+    if args['SPLIT_TYPE'] != 'pure_split':
         cv_preds = np.concatenate([start_preds, end_preds], axis=1)
-        pd.DataFrame(cv_preds).to_csv(f'../output/validation/{config.MODEL_NAME}_cv.csv', index=False)   
+        pd.DataFrame(cv_preds).to_csv(f'../output/validation/{args["MODEL_NAME"]}_cv.csv', index=False)   
 
 if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=1 python3 train.py
-    # parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
-    # parser.add_argument('--batch_size', default=16)
-    # parser.add_argument('--max_len', default=128)
-    # parser.add_argument('--EPOCH', default=1)
-    # parser.add_argument('--lr', default=3e-5)
-    # parser.add_argument('--nfolds', default=5)
-    # parser.add_argument('--split_type', default='kfold')
-    # parser.add_argument('--patience', default=1)
-    # parser.add_argument('--dropout_rate', default=0.3)
+    parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
+    parser.add_argument('--BATCH_SIZE', default=16)
+    parser.add_argument('--MODEL_TYPE', default='roberta')
+    parser.add_argument('--MODEL_VERSION', default='roberta-base')
+    parser.add_argument('--MAX_LEN', default=128)
+    parser.add_argument('--EPOCH', default=1)
+    parser.add_argument('--LR', default=3e-5)
+    parser.add_argument('--NFOLDS', default=5)
+    parser.add_argument('--SPLIT_TYPE', default='kfold')         #kfold, pure_split
+    parser.add_argument('--PATIENCE', default=1)
+    parser.add_argument('--TRAIN_NUM', default=None)
+    parser.add_argument('--DIR', default="..")
+    parser.add_argument('--SEED', default=42)
+    parser.add_argument('--DEVICE', default=torch.device('cuda'))   #cpu          
+    parser.add_argument('--SHUFFLE', default=True)
+    parser.add_argument('--PRE_CLEAN', default=False)
+    parser.add_argument('--MODEL_NAME', default='baseline')
 
-    # args = parser.parse_args()
-    # args = dict(vars(args))
+    args = parser.parse_args()
+    args = dict(vars(args))
 
-    set_seed()
-    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)[:config.TRN_NUM]
+    if args['MODEL_TYPE'] == 'bert':
+        TOKENIZER = tokenizers.BertWordPieceTokenizer(
+        f"{args['DIR']}/input/vocab.txt",
+        lowercase=True,
+    )
+    elif args['MODEL_TYPE'] == 'roberta':
+        TOKENIZER = tokenizers.ByteLevelBPETokenizer(
+        vocab_file=f"{args['DIR']}/input/roberta-base-squad2/vocab.json",
+        merges_file=f"{args['DIR']}/input/roberta-base-squad2/merges.txt",
+        lowercase=True,
+        add_prefix_space=True
+    )
+
+    #roberta-base
+    #roberta-large
+    #roberta-base-squad2
+        MODEL_PATH = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/'
+        MODEL_CONF = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/config.json'
+    
+    elif args['MODEL_TYPE'] == 'albert':
+        MODEL_PATH = 'albert-base-v2'
+        TOKENIZER = SentencePieceTokenizer(f'{args["DIR"]}/input/spiece.model')
+
+    set_seed(args['SEED'])
+    df = pd.read_csv(f"{args['DIR']}/input/train.csv").dropna().copy(deep=True)[:args['TRAIN_NUM']]
     #df = df[df.sentiment != 'neutral']
     df['text'] = df['text'].astype(str)
     df['selected_text'] = df['selected_text'].astype(str)
-    cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)
+    cv = CrossValidation(df, args['SPLIT_TYPE'], args['SEED'], args['NFOLDS'], args['SHUFFLE'])
     
     run(cv)
 
