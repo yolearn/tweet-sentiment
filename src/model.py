@@ -16,7 +16,7 @@ class BertUncasedQa(transformers.BertPreTrainedModel):
         self.linear1 = nn.Linear(self.embedding_size, output_size)
         nn.init.normal_(self.linear1.weight, std=0.02)
         nn.init.normal_(self.linear1.bias, 0)
-        self.softmax = nn.Softmax(dim=1)
+        
 
     def forward(self, ids, mask_id, token_type_id):
         """
@@ -30,15 +30,15 @@ class BertUncasedQa(transformers.BertPreTrainedModel):
         start_logit, end_logit = torch.split(logits, 1, dim=-1)
         start_logit = start_logit.squeeze(-1)
         end_logit = end_logit.squeeze(-1)
-        start_logit = self.softmax(start_logit)
-        end_logit = self.softmax(end_logit)
+        # start_logit = self.softmax(start_logit)
+        # end_logit = self.softmax(end_logit)
 
         # class_logit = self.linear2(sequence_output)
         # class_logit = class_logit.view(class_logit.size(0), -1)
         # class_logit = self.linear3(class_logit)
         # class_logit = class_logit.squeeze(-1)
         
-        return start_logit, end_logit
+        return F.log_softmax(start_logit, dim=1), F.log_softmax(end_logit, dim=1)
 
 
 
@@ -66,14 +66,15 @@ class RobertUncaseQa(transformers.BertPreTrainedModel):
         start_logit, end_logit = torch.split(logits, 1, dim=-1)
         start_logit = start_logit.squeeze(-1)
         end_logit = end_logit.squeeze(-1)
-        start_logit = self.softmax(start_logit)
-        end_logit = self.softmax(end_logit)
+        # start_logit = self.softmax(start_logit)
+        # end_logit = self.softmax(end_logit)
 
         # class_logit = self.linear2(sequence_output)
         # class_logit = class_logit.view(class_logit.size(0), -1)
-        # class_logit = self.linear3(class_logit)
+        # class _logit = self.linear3(class_logit)
         # class_logit = class_logit.squeeze(-1)
-        
+
+
         return start_logit, end_logit
 
 

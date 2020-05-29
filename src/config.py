@@ -7,7 +7,7 @@ import sentencepiece_pb2
 import sentencepiece as spm
 import os
 
-SAVE_MODEL = False
+SAVE_MODEL = True
 
 """
 class SentencePieceTokenizer:

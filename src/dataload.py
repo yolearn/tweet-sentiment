@@ -54,10 +54,10 @@ class TweetDataset:
 
         elif self.model_type == 'bert':
             token_out = self.tokenizer.encode(text)
-            ids = token_out.ids[1:-1]
-            token_type_ids = token_out.type_ids[1:-1] 
-            offsets = token_out.offsets[1:-1] 
-            mask_ids = token_out.attention_mask[1:-1]
+            ids = token_out.ids
+            token_type_ids = token_out.type_ids 
+            offsets = token_out.offsets
+            mask_ids = token_out.attention_mask
 
             sentiment_d = {
                 'positive': 3893,
@@ -88,9 +88,9 @@ class TweetDataset:
 
         target_start_idx = np.zeros(self.max_len)
         target_end_idx = np.zeros(self.max_len)
-        # Due to [CLS]+1
+        # target_start_idx = 0
+        # target_end_idx = 0
 
-        
         """
         Robert
         - single input : <s> X </s>
@@ -107,6 +107,8 @@ class TweetDataset:
         
 
         if self.model_type == 'roberta':
+            # target_start_idx = targets_idx[0]+4
+            # target_start_idx = targets_idx[-1]+4
             target_start_idx[targets_idx[0]+4] = 1
             target_end_idx[targets_idx[-1]+4] = 1
 
@@ -116,8 +118,10 @@ class TweetDataset:
             offsets = [(0,0)] * 4 + offsets + [(0,0)]
         
         elif self.model_type == 'bert':
-            target_start_idx[targets_idx[0]+3] = 1
-            target_end_idx[targets_idx[-1]+3] = 1
+            target_start_idx = targets_idx[0]+3
+            target_start_idx = targets_idx[-1]+3
+            # target_start_idx[targets_idx[0]+3] = 1
+            # target_end_idx[targets_idx[-1]+3] = 1
 
             ids = [101] + [sentiment_d[sentiment]] + [102] + ids + [102]
             token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]
@@ -125,8 +129,10 @@ class TweetDataset:
             offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
         elif self.model_type == 'albert':
-            target_start_idx[targets_idx[0]+3] = 1
-            target_end_idx[targets_idx[-1]+3] = 1
+            target_start_idx = targets_idx[0]+3
+            target_start_idx = targets_idx[-1]+3
+            # target_start_idx[targets_idx[0]+3] = 1
+            # target_end_idx[targets_idx[-1]+3] = 1
 
             ids = [2] + [sentiment_d[sentiment]] + [3] + ids + [3]
             token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]

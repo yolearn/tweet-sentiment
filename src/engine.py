@@ -20,14 +20,26 @@ def custLoss(preds, target):
     target = torch.argmax(target, axis=1)
     return torch.sum((target-pred)**2)
 
-def EntropyLoss(pred, target):
-    loss = nn.CrossEntropyLoss()(pred,target)
+def EntropyLoss(o1, o2, t1, t2):
+    t1 = torch.argmax(t1, axis=1)
+    t2 = torch.argmax(t2, axis=1)
+    CE = nn.CrossEntropyLoss()
+    l1 = CE(o1, t1)
+    l2 = CE(o2, t2)
 
-    return loss
+    return l1 + l2
 
 def BcwLoss(o1, o2, t1, t2):
-    l1 = nn.BCEWithLogitsLoss()(o1, t1)
-    l2 = nn.BCEWithLogitsLoss()(o2, t2)
+    bcw = nn.BCEWithLogitsLoss()
+    # temp1 = torch.zeros(t1.size(0), 128).to('cuda', dtype=torch.float)
+    # temp2 = torch.zeros(t1.size(0), 128).to('cuda', dtype=torch.float)
+    
+    # for i in range(t1.size(0)):
+    #     temp1[i, t1[i]] = 1
+    #     temp2[i, t2[i]] = 1
+
+    l1 = bcw(o1, t1)
+    l2 = bcw(o2, t2)
 
     return l1 + l2
 
@@ -39,7 +51,7 @@ def trn_loop_fn(data_loader, model, optimzer, device):
     model.train()
     tk = tqdm(data_loader, total=len(data_loader))
     losses = AverageMeter()
-
+    
     for i, d in enumerate(tk):
         ids = d['ids']
         mask_ids = d['mask_ids']
@@ -59,16 +71,17 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         target_end_idx = target_end_idx.to(device, dtype=torch.float)
         targ_sentiment = targ_sentiment.to(device, dtype=torch.long)
         
-
         optimzer.zero_grad()
         o1, o2 = model(ids, mask_ids, token_type_ids)
-        bcw_loss = BcwLoss(o1, o2, target_start_idx, target_end_idx)
-        #entropy_loss = EntropyLoss(o3, targ_sentiment)
-        loss = loss_fn(bcw_loss)
+        
+        entropy_loss = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
+        bct_loss = BcwLoss(o1, o2, target_start_idx, target_end_idx)
+        loss = loss_fn(bct_loss)
 
         loss.backward()
         optimzer.step()
         losses.update(loss.item(), ids.size(0))
+        #scheduler.step(losses.avg)
         tk.set_postfix(loss=losses.avg)
     
 def eval_loop_fn(data_loader, model, device, df_type):
@@ -99,13 +112,13 @@ def eval_loop_fn(data_loader, model, device, df_type):
             ids = ids.to(device, dtype=torch.long)
             mask_ids = mask_ids.to(device, dtype=torch.long)
             token_type_ids = token_type_ids.to(device, dtype=torch.long)
-            target_start_idx = target_start_idx.to(device, dtype=torch.float)
-            target_end_idx = target_end_idx.to(device, dtype=torch.float)
+            target_start_idx = target_start_idx.to(device, dtype=torch.long)
+            target_end_idx = target_end_idx.to(device, dtype=torch.long)
             targ_sentiment = targ_sentiment.to(device, dtype=torch.long)
 
             o1, o2 = model(ids, mask_ids, token_type_ids)
-            fin_output_start.append(o1.cpu().detach().numpy())
-            fin_output_end.append(o2.cpu().detach().numpy())
+            fin_output_start.append(torch.softmax(o1, axis=1).cpu().detach().numpy())
+            fin_output_end.append(torch.softmax(o2, axis=1).cpu().detach().numpy())
             #fin_output_sentiment.append(torch.softmax(o3, axis=1).cpu().detach().numpy())
 
             fin_offset.append(offsets)

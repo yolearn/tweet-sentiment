@@ -147,6 +147,7 @@ def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment
         if len(orig_text.split()) < 4:
             output_string = orig_text
         
+        output_string = post_process(output_string)
         output_string = output_string.strip()
         if orig_sentiment == 'neutral':
             output_string = orig_text
@@ -169,6 +170,17 @@ def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment
         'pos_score' : sum(pos_score) / len(pos_score) if len(neu_score)!=0 else None,
         'neg_score' : sum(neg_score) / len(neg_score if len(neu_score)!=0 else None)
     }
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 class SentencePieceTokenizer:
     def __init__(self, model_path):
@@ -208,6 +220,32 @@ def clean_text(text):
     text = re.sub('\n', '', text)
     text = re.sub('\w*\d\w*', '', text)
     return text
+
+
+def pre_process(df):
+    #print(df.head())
+    # df['text'] = df['text'].apply(lambda x:clean_text(x))
+    # df['selected_text'] = df['selected_text'].apply(lambda x:clean_text(x))
+    df = df[df['sentiment'] != 'neutral']
+
+    return df
+    
+
+def post_process(s):
+    a = re.findall('[^A-Za-z0-9]',s)
+    b = re.sub('[^A-Za-z0-9]+', '', s)
+
+    try:
+        if a.count('.')==3:
+            text = b + '. ' + b + '..'
+        elif a.count('!')==4:
+            text = b + '! ' + b + '!! ' +  b + '!!!'
+        else:
+            text = s
+        return text
+    except:
+        return text
+
 
 
 def load_model():
