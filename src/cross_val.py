@@ -14,7 +14,8 @@ class CrossValidation:
         self.nfolds = nfolds
         self.shuffle = shuffle
         self.trn_rate = trn_rate
-    
+        self.seed = seed
+
     def split(self):
         if self.split_type == 'kfold':
             kf = KFold(n_splits=self.nfolds, shuffle=self.shuffle)
@@ -29,17 +30,22 @@ class CrossValidation:
                 yield trn_idx, val_idx
         
         elif self.split_type == 'pure_split':
-            trn_df, val_df = train_test_split(self.df, train_size=self.trn_rate, random_state=config.SEED)
-            yield trn_df.index, val_df.index
+            kf = KFold(n_splits=self.nfolds, shuffle=self.shuffle)
+            for i, (trn_idx, val_idx) in enumerate(kf.split(self.df)):
+                print(f"{i+1} fold : ")
+                yield trn_idx, val_idx
+                break
 
 
 if __name__ == "__main__":
     #orig_df = pd.read_csv(config.TRAIN_FILE).dropna()
-    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)
+    df = pd.read_csv(config.TRAIN_FILE).dropna()
+    #df1 = df
     #cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)
     cv = CrossValidation(df, 'pure_split', config.SEED, config.NFOLDS, config.SHUFFLE)
     
     for fold, (trn_idx, val_indx) in enumerate(cv.split()):
+        print(type(trn_idx))
         print(fold)
         print(len(df.iloc[trn_idx]))
         print(len(df.iloc[val_indx]))

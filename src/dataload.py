@@ -39,7 +39,7 @@ class TweetDataset:
                 char_targets[i] = 1
 
 
-        if self.model_type == 'roberta':
+        if self.model_type in ['roberta-base', 'roberta-base-squad2', 'roberta-large']:
             token_out = self.tokenizer.encode(text)
             ids = token_out.ids 
             token_type_ids = token_out.type_ids 
@@ -51,8 +51,8 @@ class TweetDataset:
                 'negative': 2430,
                 'neutral': 7974
             }
-
-        elif self.model_type == 'bert':
+        
+        elif self.model_type in ['bert-base-uncased']:
             token_out = self.tokenizer.encode(text)
             ids = token_out.ids
             token_type_ids = token_out.type_ids 
@@ -65,7 +65,7 @@ class TweetDataset:
                 'neutral': 8699
             }
 
-        elif self.model_type == 'albert':
+        elif self.model_type in ['albert-base-v2']:
             token_out = self.tokenizer.encode(text)
             ids = token_out[0]
             offsets = token_out[1]
@@ -106,7 +106,7 @@ class TweetDataset:
         """
         
 
-        if self.model_type == 'roberta':
+        if self.model_type in ['roberta-base', 'roberta-base-squad2', 'roberta-large']:
             # target_start_idx = targets_idx[0]+4
             # target_start_idx = targets_idx[-1]+4
             target_start_idx[targets_idx[0]+4] = 1
@@ -117,7 +117,7 @@ class TweetDataset:
             mask_ids = [1] * 4 + mask_ids + [1]
             offsets = [(0,0)] * 4 + offsets + [(0,0)]
         
-        elif self.model_type == 'bert':
+        elif self.model_type in ['bert-base-uncased']:
             target_start_idx = targets_idx[0]+3
             target_start_idx = targets_idx[-1]+3
             # target_start_idx[targets_idx[0]+3] = 1
@@ -128,7 +128,7 @@ class TweetDataset:
             mask_ids = [1] * 3 + mask_ids + [1]
             offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
-        elif self.model_type == 'albert':
+        elif self.model_type in ['albert-base-v2']:
             target_start_idx = targets_idx[0]+3
             target_start_idx = targets_idx[-1]+3
             # target_start_idx[targets_idx[0]+3] = 1

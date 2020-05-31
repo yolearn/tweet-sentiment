@@ -1,12 +1,23 @@
 #roberta squad
 CUDA_VISIBLE_DEVICES=1 python3 train.py \
-    --MODEL_TYPE roberta \
-    --MODEL_VERSION roberta-base-squad2 \
-    --MODEL_NAME roberta_base_squad2_pre_pro \
-    --NFOLDS 10 \
-    --EPOCH 10
+    --MODEL_VERSION roberta-base \
+    --MODEL_NAME exper \
+    --MODEL_NAME pure_split \
+    --CNN_KERNEL_SZIE 1 \
+    --CNN_OUTPUT_CHANNEL 2 \
+    --EPOCH 3 \
+    --NFOLDS 3 \
 
-    #--PRE_CLEAN y
+
+# parser.add_argument('--EMBEDDING_SIZE', default=768, type=int)
+# parser.add_argument('--CNN_KERNEL_SZIE', default=1, type=int)
+# parser.add_argument('--CNN_OUTPUT_CHANNEL', default=1, type=int)
+# parser.add_argument('--BATCH_SIZE', default=32, type=int)
+# parser.add_argument('--MODEL_VERSION', default='roberta-base')
+# parser.add_argument('--MAX_LEN', default=128, type=int)
+# parser.add_argument('--EPOCH', default=3, type=int)
+# parser.add_argument('--LR', default=3e-5, type=int)
+# parser.add_argument('--PATIENCE', default=1, type=int)
 
 #roberta origin
 # CUDA_VISIBLE_DEVICES=1 python3 train.py \

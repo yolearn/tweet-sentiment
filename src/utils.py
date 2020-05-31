@@ -93,8 +93,7 @@ class EarlyStopping():
             self.pred2 = pred2
             self.epoch = epoch
             self.counter = 0
-            if config.SAVE_MODEL:
-                self.save_model()
+            self.save_model()
 
         else :
             self.counter+=1
@@ -147,7 +146,7 @@ def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment
         if len(orig_text.split()) < 4:
             output_string = orig_text
         
-        output_string = post_process(output_string)
+        #output_string = post_process(output_string)
         output_string = output_string.strip()
         if orig_sentiment == 'neutral':
             output_string = orig_text

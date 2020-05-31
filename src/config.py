@@ -9,7 +9,7 @@ import os
 
 SAVE_MODEL = True
 
-"""
+
 class SentencePieceTokenizer:
     def __init__(self, model_path):
         self.sp = spm.SentencePieceProcessor()
@@ -125,4 +125,3 @@ if __name__ == "__main__":
 # LR = args['lr']
 # DROPOUT_RATE = args['dropout_rate']
 # PATIENCE = args['patience']
-"""

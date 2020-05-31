@@ -74,9 +74,9 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         optimzer.zero_grad()
         o1, o2 = model(ids, mask_ids, token_type_ids)
         
-        entropy_loss = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
-        bct_loss = BcwLoss(o1, o2, target_start_idx, target_end_idx)
-        loss = loss_fn(bct_loss)
+        loss1 = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
+        #loss2 = BcwLoss(o1, o2, target_start_idx, target_end_idx)
+        loss = loss_fn(loss1)
 
         loss.backward()
         optimzer.step()
