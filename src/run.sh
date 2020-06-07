@@ -2,11 +2,9 @@
 CUDA_VISIBLE_DEVICES=1 python3 train.py \
     --MODEL_VERSION roberta-base \
     --MODEL_NAME exper \
-    --MODEL_NAME pure_split \
-    --CNN_KERNEL_SZIE 1 \
-    --CNN_OUTPUT_CHANNEL 2 \
+    --SPLIT_TYPE pure_split \
     --EPOCH 3 \
-    --NFOLDS 3 \
+    --BATCH_SIZE 16 \
 
 
 # parser.add_argument('--EMBEDDING_SIZE', default=768, type=int)

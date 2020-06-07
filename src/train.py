@@ -16,6 +16,26 @@ import time
 import transformers
 import tokenizers
 from torch.optim import lr_scheduler
+import sentencepiece_pb2
+import sentencepiece as spm
+
+
+class SentencePieceTokenizer:
+    def __init__(self, model_path):
+        self.sp = spm.SentencePieceProcessor()
+        self.sp.load(model_path)
+    
+    def encode(self, sentence):
+        spt = sentencepiece_pb2.SentencePieceText()
+        spt.ParseFromString(self.sp.encode_as_serialized_proto(sentence))
+        offsets = []
+        tokens = []
+        for piece in spt.pieces:
+            tokens.append(piece.id)
+            offsets.append((piece.begin, piece.end))
+        return tokens, offsets
+
+
 def run(cv):
     score = []
     start_preds = np.zeros((df.shape[0], args['MAX_LEN']))
@@ -50,17 +70,17 @@ def run(cv):
                         )
             MODEL_CONF = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
             MODEL_CONF.output_hidden_states = True
-            model = RobertUncaseQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], 2, args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_SZIE'], args['DROPOUT_RATE']).to(args['DEVICE'])
-                        
+            model = RobertUncaseQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], 2, args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_WIDTH'], args['DROPOUT_RATE']).to(args['DEVICE'])
+        
         elif args['MODEL_VERSION'] in ['albert-base-v2']:
             MODEL_PATH = 'albert-base-v2'
             TOKENIZER = SentencePieceTokenizer(f'{args["DIR"]}/input/spiece.model')
             
             MODEL_CONF = transformers.AlbertConfig.from_pretrained(MODEL_CONF)
-            model = AlbertQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_SZIE']).to(args['DEVICE'])
-
+            MODEL_CONF.output_hidden_states = True
+            model = AlbertQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], 2, args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_SZIE'], args['DROPOUT_RATE']).to(args['DEVICE'])
+                    
         
-        print(MODEL_CONF)
         trn_dataset = TweetDataset(
             text=trn_df['text'].values,
             selected_text=trn_df['selected_text'].values,
@@ -146,7 +166,7 @@ if __name__ == '__main__':
     
     #MODLE HYPER PARAMETER
     parser.add_argument('--EMBEDDING_SIZE', default=768, type=int)
-    parser.add_argument('--CNN_KERNEL_SZIE', default=1, type=int)
+    parser.add_argument('--CNN_KERNEL_WIDTH', default=1, type=int)
     parser.add_argument('--CNN_OUTPUT_CHANNEL', default=1, type=int)
     parser.add_argument('--BATCH_SIZE', default=32, type=int)
     parser.add_argument('--MODEL_VERSION', default='roberta-base')

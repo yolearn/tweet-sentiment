@@ -118,10 +118,10 @@ class TweetDataset:
             offsets = [(0,0)] * 4 + offsets + [(0,0)]
         
         elif self.model_type in ['bert-base-uncased']:
-            target_start_idx = targets_idx[0]+3
-            target_start_idx = targets_idx[-1]+3
-            # target_start_idx[targets_idx[0]+3] = 1
-            # target_end_idx[targets_idx[-1]+3] = 1
+            # target_start_idx = targets_idx[0]+3
+            # target_start_idx = targets_idx[-1]+3
+            target_start_idx[targets_idx[0]+3] = 1
+            target_end_idx[targets_idx[-1]+3] = 1
 
             ids = [101] + [sentiment_d[sentiment]] + [102] + ids + [102]
             token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]
@@ -129,10 +129,10 @@ class TweetDataset:
             offsets = [(0,0)] * 3 + offsets + [(0,0)]
 
         elif self.model_type in ['albert-base-v2']:
-            target_start_idx = targets_idx[0]+3
-            target_start_idx = targets_idx[-1]+3
-            # target_start_idx[targets_idx[0]+3] = 1
-            # target_end_idx[targets_idx[-1]+3] = 1
+            # target_start_idx = targets_idx[0]+3
+            # target_start_idx = targets_idx[-1]+3
+            target_start_idx[targets_idx[0]+3] = 1
+            target_end_idx[targets_idx[-1]+3] = 1
 
             ids = [2] + [sentiment_d[sentiment]] + [3] + ids + [3]
             token_type_ids = [0] * 3 + [1] * len(token_type_ids) + [1]

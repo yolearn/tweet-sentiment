@@ -74,9 +74,9 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         optimzer.zero_grad()
         o1, o2 = model(ids, mask_ids, token_type_ids)
         
-        loss1 = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
+        loss = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
         #loss2 = BcwLoss(o1, o2, target_start_idx, target_end_idx)
-        loss = loss_fn(loss1)
+        #loss = loss_fn(loss1, loss2)
 
         loss.backward()
         optimzer.step()
@@ -117,8 +117,10 @@ def eval_loop_fn(data_loader, model, device, df_type):
             targ_sentiment = targ_sentiment.to(device, dtype=torch.long)
 
             o1, o2 = model(ids, mask_ids, token_type_ids)
-            fin_output_start.append(torch.softmax(o1, axis=1).cpu().detach().numpy())
-            fin_output_end.append(torch.softmax(o2, axis=1).cpu().detach().numpy())
+            # fin_output_start.append(torch.softmax(o1, axis=1).cpu().detach().numpy())
+            # fin_output_end.append(torch.softmax(o2, axis=1).cpu().detach().numpy())
+            fin_output_start.append(o1.cpu().detach().numpy())
+            fin_output_end.append(o2.cpu().detach().numpy())
             #fin_output_sentiment.append(torch.softmax(o3, axis=1).cpu().detach().numpy())
 
             fin_offset.append(offsets)
