@@ -6,136 +6,82 @@ import torch
 from dataload import TweetDataset
 from sklearn import model_selection
 from model import BertUncasedQa, RobertUncaseQa, AlbertQa
-from model_gcnn import RobertUncaseQa
-#from model_linear import RobertUncaseQa
 from transformers import AdamW
-import os
-
+import config
 from cross_val import CrossValidation
 import torch.nn as nn
-from utils import upload_to_aws, EarlyStopping, set_seed, clean_text, str2bool, pre_process
+from utils import upload_to_aws, EarlyStopping, set_seed
 import time
 import transformers
-import tokenizers
-from torch.optim import lr_scheduler
-import sentencepiece_pb2
-import sentencepiece as spm
-
-
-class SentencePieceTokenizer:
-    def __init__(self, model_path):
-        self.sp = spm.SentencePieceProcessor()
-        self.sp.load(model_path)
-    
-    def encode(self, sentence):
-        spt = sentencepiece_pb2.SentencePieceText()
-        spt.ParseFromString(self.sp.encode_as_serialized_proto(sentence))
-        offsets = []
-        tokens = []
-        for piece in spt.pieces:
-            tokens.append(piece.id)
-            offsets.append((piece.begin, piece.end))
-        return tokens, offsets
 
 def run(cv):
     score = []
-    start_preds = np.zeros((df.shape[0], args['MAX_LEN']))
-    end_preds = np.zeros((df.shape[0], args['MAX_LEN']))
+    start_preds = np.zeros((df.shape[0], config.MAX_LEN))
+    end_preds = np.zeros((df.shape[0], config.MAX_LEN))
     
     for fold, (trn_idx, val_idx) in enumerate(cv.split()):
         trn_df = df.iloc[trn_idx]
-        if args['PRE_CLEAN']:
-            print('cleaning......')
-            trn_df = pre_process(trn_df, args['REMOVE_LENGTH'])
-        
         val_df = df.iloc[val_idx]
-        MODEL_PATH = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/'
-        MODEL_CONF = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/config.json'
-        print(f"Initial ....{args['MODEL_VERSION']}")
+        print(f'Initial ....  {config.MODEL_PATH}')
+        if config.MODEL_TYPE == 'bert':
+            bert_model = BertUncasedQa(config.MODEL_PATH).to(config.DEVICE)
+            model = bert_model
 
-        if args['MODEL_VERSION'] in ['bert-base-uncased']:
-            TOKENIZER = tokenizers.BertWordPieceTokenizer(
-                            f"{args['DIR']}/input/vocab.txt",
-                            lowercase=True,
-                            add_special_tokens=False
-                        )
-            MODEL_CONF = transformers.AlbertConfig.from_pretrained(MODEL_CONF)
-            model = BertConfig(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_SZIE']).to(args['DEVICE'])
+        elif config.MODEL_TYPE == 'roberta':
+            roberta_conf = transformers.RobertaConfig.from_pretrained(config.MODEL_CONF)
+            robert_model = RobertUncaseQa(config.MODEL_PATH, roberta_conf).to(config.DEVICE)
+            model = robert_model
 
-        elif args['MODEL_VERSION'] in ['roberta-base', 'roberta-base-squad2', 'roberta-large']:  
-            TOKENIZER = tokenizers.ByteLevelBPETokenizer(
-                            vocab_file=f"{args['DIR']}/input/roberta-base-squad2/vocab.json",
-                           merges_file=f"{args['DIR']}/input/roberta-base-squad2/merges.txt",
-                            lowercase=True,
-                            add_prefix_space=True
-                        )
-            MODEL_CONF = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
-            MODEL_CONF.output_hidden_states = True
-            model = RobertUncaseQa(
-                        robert_path=MODEL_PATH, 
-                        conf=MODEL_CONF, 
-                        embedding_size=args['EMBEDDING_SIZE'], 
-                        cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
-                        kernel_width=args['CNN_KERNEL_WIDTH'], 
-                        dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
-                    ) 
-        
-        elif args['MODEL_VERSION'] in ['albert-base-v2']:
-            TOKENIZER = SentencePieceTokenizer(f'{args["DIR"]}/input/spiece.model')
-            
-            MODEL_CONF = transformers.AlbertConfig.from_pretrained(MODEL_CONF)
-            MODEL_CONF.output_hidden_states = True
-            model = AlbertQa(
-                        robert_path=MODEL_PATH, 
-                        conf=MODEL_CONF, 
-                        embedding_size=args['EMBEDDING_SIZE'], 
-                        cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
-                        kernel_width=args['CNN_KERNEL_WIDTH'], 
-                        dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
-                    )  
-        
+        elif config.MODEL_TYPE == 'albert':
+            albert_model = AlbertQa(config.MODEL_PATH).to(config.DEVICE)
+            model = albert_model
+
+        model = nn.DataParallel(model)
+        optimzer = AdamW(model.parameters(), lr=config.LR)
+
         trn_dataset = TweetDataset(
             text=trn_df['text'].values,
             selected_text=trn_df['selected_text'].values,
             sentiment=trn_df['sentiment'].values,
-            tokenizer=TOKENIZER,
-            max_len=args['MAX_LEN'],
-            model_type=args['MODEL_VERSION']
+            tokenizer=config.TOKENIZER,
+            max_len=config.MAX_LEN,
+            model_type=config.MODEL_TYPE
         )
 
         val_dataset = TweetDataset(
             text=val_df['text'].values,
             selected_text=val_df['selected_text'].values,
             sentiment=val_df['sentiment'].values,
-            tokenizer=TOKENIZER,
-            max_len=args['MAX_LEN'],
-            model_type=args['MODEL_VERSION']
+            tokenizer=config.TOKENIZER,
+            max_len=config.MAX_LEN,
+            model_type=config.MODEL_TYPE
         )
 
         trn_data_loader = torch.utils.data.DataLoader(
             dataset = trn_dataset, 
-            batch_size = args['BATCH_SIZE']
+            batch_size = config.BATCH_SIZE
         )   
 
         val_data_loader = torch.utils.data.DataLoader(
             dataset = val_dataset, 
-            batch_size = args['BATCH_SIZE']
+            batch_size = config.BATCH_SIZE
         ) 
 
-        model_pth = f'{args["DIR"]}/model/{args["MODEL_NAME"]}/fold{fold+1}.pth'
-        earlystop = EarlyStopping(path=model_pth, patience=args['PATIENCE'])
-        
-        model = nn.DataParallel(model)
-        optimizer = AdamW(model.parameters(), lr=args['LR'])
+        model_pth = f'../model/{config.MODEL_NAME}/fold{fold+1}.pth'
+        earlystop = EarlyStopping(path=model_pth, patience=config.PATIENCE)
+   
+        for i in range(config.EPOCH):       
+            trn_loop_fn(trn_data_loader, model, optimzer, config.DEVICE)
+            #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
+            #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
+            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, config.DEVICE, 'val')
+            print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
+            #print(f"Train {i+1} EPOCH : AVG ACCURACY      = {accuracy}")
+            print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
+            print(f"Train {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
+            print(f"Train {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
+            
 
-        for i in range(args['EPOCH']):       
-            trn_loop_fn(trn_data_loader, model, optimizer, args['DEVICE'])
-            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, args['DEVICE'], 'val', args['REMOVE_LENGTH'])
-            print(f"Val {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
-            print(f"Val {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
-            print(f"Val {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
-            print(f"Val {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
-        
             earlystop(cur_score['avg_score'], model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
@@ -143,65 +89,41 @@ def run(cv):
 
         score.append(earlystop.max)
 
-        if args['SPLIT_TYPE'] != 'pure_split':
-            start_preds[val_idx] = earlystop.pred1
-            end_preds[val_idx] = earlystop.pred2
-    
-    text_file = open(f'{args["DIR"]}/model/{args["MODEL_NAME"]}/score.txt', "w")
-    text_file.write(str(score))
-    text_file.write("\n")
-    text_file.write(str(sum(score) / len(score)))
-    text_file.close()
+    if config.SPLIT_TYPE != 'pure_split':
+        start_preds[val_idx] = earlystop.pred1
+        end_preds[val_idx] = earlystop.pred2
 
-    if args['SPLIT_TYPE'] != 'pure_split':
+        
+    print("cv score : ", score)
+    print("average cv score : ", sum(score) / len(score))
+
+    if config.SPLIT_TYPE != 'pure_split':
         cv_preds = np.concatenate([start_preds, end_preds], axis=1)
-        pd.DataFrame(cv_preds).to_csv(f'{args["DIR"]}/model/{args["MODEL_NAME"]}/cv.csv', index=False)   
+        pd.DataFrame(cv_preds).to_csv(f'../output/validation/{config.MODEL_NAME}_cv.csv', index=False)   
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
-    parser.add_argument('--NFOLDS', default=5, type=int)
-    parser.add_argument('--SPLIT_TYPE', default='kfold')         #kfold, pure_split
-    parser.add_argument('--DIR', default="..")                  
-    parser.add_argument('--SEED', default=42, type=int)
-    parser.add_argument('--DEVICE', default=torch.device('cuda'))   #cpu          
-    parser.add_argument('--SHUFFLE', default=True)
-    parser.add_argument('--PRE_CLEAN', default=True)
-    parser.add_argument('--MODEL_NAME', default='baseline')
-    
-    #MODLE HYPER PARAMETER
-    parser.add_argument('--EMBEDDING_SIZE', default=768, type=int)
-    parser.add_argument('--CNN_KERNEL_WIDTH', default=1, type=int)
-    parser.add_argument('--CNN_OUTPUT_CHANNEL', default=1, type=int)
-    parser.add_argument('--BATCH_SIZE', default=32, type=int)
-    parser.add_argument('--MODEL_VERSION', default='roberta-base')
-    parser.add_argument('--MAX_LEN', default=128, type=int)
-    parser.add_argument('--EPOCH', default=3, type=int)
-    parser.add_argument('--LR', default=3e-5, type=int)
-    parser.add_argument('--PATIENCE', default=1, type=int)
-    parser.add_argument('--DROPOUT_RATE', default=0.1, type=int)
-    parser.add_argument('--REMOVE_LENGTH', default=4, type=int)
+    #CUDA_VISIBLE_DEVICES=1 python3 train.py
+    # parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
+    # parser.add_argument('--batch_size', default=16)
+    # parser.add_argument('--max_len', default=128)
+    # parser.add_argument('--EPOCH', default=1)
+    # parser.add_argument('--lr', default=3e-5)
+    # parser.add_argument('--nfolds', default=5)
+    # parser.add_argument('--split_type', default='kfold')
+    # parser.add_argument('--patience', default=1)
+    # parser.add_argument('--dropout_rate', default=0.3)
 
+    # args = parser.parse_args()
+    # args = dict(vars(args))
 
-    args = parser.parse_args()
-    args = dict(vars(args))
-    
-    #Show setting    
-    for key, value in args.items():
-        print(key, value)
-
-    set_seed(args['SEED'])
-    df = pd.read_csv(f"{args['DIR']}/input/train.csv").copy(deep=True)
+    set_seed()
+    df = pd.read_csv(config.TRAIN_FILE).copy(deep=True)[:config.TRN_NUM]
+    #df = df[df.sentiment != 'neutral']
     df['text'] = df['text'].astype(str)
     df['selected_text'] = df['selected_text'].astype(str)
-    cv = CrossValidation(df, args['SPLIT_TYPE'], args['SEED'], args['NFOLDS'], args['SHUFFLE'])
+    cv = CrossValidation(df, config.SPLIT_TYPE, config.SEED, config.NFOLDS, config.SHUFFLE)
     
-    if os.path.exists(f"../model/{args['MODEL_NAME']}"):
-        pass
-    else:
-        os.mkdir(f"../model/{args['MODEL_NAME']}")
-
     run(cv)
-
 
 
     
