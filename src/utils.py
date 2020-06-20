@@ -42,7 +42,6 @@ def set_seed(seed):
 def upload_to_aws(local_file, bucket, s3_file):
     s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY,
                       aws_secret_access_key=SECRET_KEY)
-
     try:
         s3.upload_file(local_file, bucket, s3_file)
         print("Upload Successful")
@@ -105,7 +104,7 @@ class EarlyStopping():
             print(f'The best score is {self.max}')
 
     def save_model(self):
-        #using parrallel will prefix "module."
+        #using parrallel will haveprefix "module."
         print('saving.....')
         try :
             torch.save(self.model.module.state_dict(), self.path)
@@ -177,7 +176,6 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-
 class SentencePieceTokenizer:
     def __init__(self, model_path):
         self.sp = spm.SentencePieceProcessor()
@@ -228,7 +226,6 @@ def pre_process(df, length=4):
 
     return df
     
-
 def post_process(s):
     a = re.findall('[^A-Za-z0-9]',s)
     b = re.sub('[^A-Za-z0-9]+', '', s)
@@ -244,44 +241,68 @@ def post_process(s):
     except:
         return text
 
+def load_model(file_path):
+    model1 = RobertUncaseQa(
+                robert_path=config.MODEL_PATH, 
+                conf=config.MODEL_CONF, 
+                embedding_size=config.EMBEDDING_SIZE, 
+                cnn_output_channel=config.CNN_OUTPUT_CHANNEL,
+                kernel_width=config.CNN_KERNEL_WIDTH, 
+                dropout_rate=config.DROPOUT_RATE
+            ).to(config.DEVICE)
 
+    model1.load_state_dict(torch.load(f'../model/{file_path}/fold1.pth'))
 
-def load_model():
-    model1 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model1.load_state_dict(torch.load('../model/model_fold1.pth'))
-    model1 = nn.DataParallel(model1)
-    model1.eval()
+    model2 = RobertUncaseQa(
+                robert_path=config.MODEL_PATH, 
+                conf=config.MODEL_CONF, 
+                embedding_size=config.EMBEDDING_SIZE, 
+                cnn_output_channel=config.CNN_OUTPUT_CHANNEL,
+                kernel_width=config.CNN_KERNEL_WIDTH, 
+                dropout_rate=config.DROPOUT_RATE
+            ).to(config.DEVICE)
 
-    model2 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model2.load_state_dict(torch.load('../model/model_fold2.pth'))
-    model2 = nn.DataParallel(model2)
-    model2.eval()
+    model2.load_state_dict(torch.load(f'../model/{file_path}/fold2.pth'))
 
-    model3 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model3.load_state_dict(torch.load('../model/model_fold3.pth'))
-    model3 = nn.DataParallel(model3)
-    model3.eval()
+    model3 = RobertUncaseQa(
+                robert_path=config.MODEL_PATH, 
+                conf=config.MODEL_CONF, 
+                embedding_size=config.EMBEDDING_SIZE, 
+                cnn_output_channel=config.CNN_OUTPUT_CHANNEL,
+                kernel_width=config.CNN_KERNEL_WIDTH, 
+                dropout_rate=config.DROPOUT_RATE
+            ).to(config.DEVICE)
 
-    model4 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model4.load_state_dict(torch.load('../model/model_fold4.pth'))
-    model4 = nn.DataParallel(model4)
-    model4.eval()
+    model3.load_state_dict(torch.load(f'../model/{file_path}/fold3.pth'))
 
-    model5 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model5.load_state_dict(torch.load('../model/model_fold5.pth'))
-    model5 = nn.DataParallel(model5)
-    model5.eval()
+    model4 = RobertUncaseQa(
+                robert_path=MODEL_PATH, 
+                conf=config.MODEL_CONF, 
+                embedding_size=args['EMBEDDING_SIZE'], 
+                cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
+                kernel_width=args['CNN_KERNEL_WIDTH'], 
+                dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
+            )
+    model4.load_state_dict(torch.load(f'../model/{file_path}/model_fold4.pth'))
+
+    model5 = RobertUncaseQa(
+                robert_path=config.MODEL_PATH, 
+                conf=config.MODEL_CONF, 
+                embedding_size=config.EMBEDDING_SIZE, 
+                cnn_output_channel=config.CNN_OUTPUT_CHANNEL,
+                kernel_width=config.CNN_KERNEL_WIDTH, 
+                dropout_rate=config.DROPOUT_RATE
+            ).to(config.DEVICE)
+
+    model5.load_state_dict(torch.load(f'../model/{file_path}/fold5.pth'))
 
     return model1, model2, model3, model4, model5
-
-
-
-
 
 if __name__ == '__main__':
     IF_UPLOAD = True
     IF_DOWNLOAD = False
     FILE = '0614_1'
+    
     #upload model
     if IF_UPLOAD:
         for file_name in os.listdir(f"../model/{FILE}"):

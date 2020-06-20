@@ -37,7 +37,6 @@ class SentencePieceTokenizer:
             offsets.append((piece.begin, piece.end))
         return tokens, offsets
 
-
 def run(cv):
     score = []
     start_preds = np.zeros((df.shape[0], args['MAX_LEN']))
@@ -66,7 +65,7 @@ def run(cv):
         elif args['MODEL_VERSION'] in ['roberta-base', 'roberta-base-squad2', 'roberta-large']:  
             TOKENIZER = tokenizers.ByteLevelBPETokenizer(
                             vocab_file=f"{args['DIR']}/input/roberta-base-squad2/vocab.json",
-                            merges_file=f"{args['DIR']}/input/roberta-base-squad2/merges.txt",
+                           merges_file=f"{args['DIR']}/input/roberta-base-squad2/merges.txt",
                             lowercase=True,
                             add_prefix_space=True
                         )
@@ -79,7 +78,7 @@ def run(cv):
                         cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
                         kernel_width=args['CNN_KERNEL_WIDTH'], 
                         dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
-                    )
+                    ) 
         
         elif args['MODEL_VERSION'] in ['albert-base-v2']:
             TOKENIZER = SentencePieceTokenizer(f'{args["DIR"]}/input/spiece.model')
@@ -123,26 +122,20 @@ def run(cv):
             batch_size = args['BATCH_SIZE']
         ) 
 
-
         model_pth = f'{args["DIR"]}/model/{args["MODEL_NAME"]}/fold{fold+1}.pth'
         earlystop = EarlyStopping(path=model_pth, patience=args['PATIENCE'])
         
         model = nn.DataParallel(model)
         optimizer = AdamW(model.parameters(), lr=args['LR'])
-        #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max')
 
         for i in range(args['EPOCH']):       
             trn_loop_fn(trn_data_loader, model, optimizer, args['DEVICE'])
-            #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
-            #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
             cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, args['DEVICE'], 'val', args['REMOVE_LENGTH'])
-            print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
-            #print(f"Train {i+1} EPOCH : AVG ACCURACY      = {accuracy}")
-            print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
-            print(f"Train {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
-            print(f"Train {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
+            print(f"Val {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
+            print(f"Val {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
+            print(f"Val {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
+            print(f"Val {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
         
-
             earlystop(cur_score['avg_score'], model, i+1, pred1, pred2)
             if earlystop.earlystop:
                 print("Early stopping")
@@ -160,18 +153,15 @@ def run(cv):
     text_file.write(str(sum(score) / len(score)))
     text_file.close()
 
-
     if args['SPLIT_TYPE'] != 'pure_split':
         cv_preds = np.concatenate([start_preds, end_preds], axis=1)
         pd.DataFrame(cv_preds).to_csv(f'{args["DIR"]}/model/{args["MODEL_NAME"]}/cv.csv', index=False)   
 
 if __name__ == '__main__':
-    #CUDA_VISIBLE_DEVICES=1 python3 train.py
     parser = argparse.ArgumentParser(description="Let's tuning hyperparameter")
     parser.add_argument('--NFOLDS', default=5, type=int)
     parser.add_argument('--SPLIT_TYPE', default='kfold')         #kfold, pure_split
-    #parser.add_argument('--TRAIN_NUM', default=1000, type=int)
-    parser.add_argument('--DIR', default="..")
+    parser.add_argument('--DIR', default="..")                  
     parser.add_argument('--SEED', default=42, type=int)
     parser.add_argument('--DEVICE', default=torch.device('cuda'))   #cpu          
     parser.add_argument('--SHUFFLE', default=True)
@@ -195,9 +185,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args = dict(vars(args))
     
+    #Show setting    
     for key, value in args.items():
         print(key, value)
-
 
     set_seed(args['SEED'])
     df = pd.read_csv(f"{args['DIR']}/input/train.csv").copy(deep=True)

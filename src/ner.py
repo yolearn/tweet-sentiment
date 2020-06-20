@@ -68,17 +68,6 @@ def train(trn_data, model=None, output_dir='../output', n_iter=100):
                     drop=0.2,  # dropout - make it harder to memorise data
                     losses=losses,
                 )
-            #print("Losses", losses)
-
-
-    # save model to output directory
-    # if output_dir is not None:
-    #     output_dir = Path(output_dir)
-    #     if not output_dir.exists():
-    #         output_dir.mkdir()
-    #     nlp.to_disk(output_dir)
-    #     print("Saved model to", output_dir)
-
     return nlp
 
 def jaccard(str1, str2): 
@@ -100,8 +89,6 @@ def predict_entities(text, model):
     
     selected_text = text[ent_array[0][0]: ent_array[0][1]] if len(ent_array) > 0 else text
     return selected_text
-
-
 
 if __name__ == "__main__":
     df = pd.read_csv('../input/train.csv')

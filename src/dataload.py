@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from utils import SentencePieceTokenizer, clean_text
 import sentencepiece_pb2
-
+import config
 
 class TweetDataset:
     def __init__(self, text, selected_text, sentiment, tokenizer, max_len, model_type):
@@ -78,7 +78,6 @@ class TweetDataset:
                 'neutral': 8387
             }
 
-
         assert len(ids) == len(token_type_ids) == len(offsets) == len(mask_ids)
     
         targets_idx = []
@@ -105,7 +104,6 @@ class TweetDataset:
         - pair input : [CLS] X [SEP] Y [SEP]
         """
         
-
         if self.model_type in ['roberta-base', 'roberta-base-squad2', 'roberta-large']:
             # target_start_idx = targets_idx[0]+4
             # target_start_idx = targets_idx[-1]+4
@@ -173,17 +171,13 @@ if __name__ == "__main__":
     trn_df = pd.read_csv(config.TRAIN_FILE)
     trn_df['text'] = trn_df['text'].apply(lambda x:clean_text(x))
     trn_df['selected_text'] = trn_df['selected_text'].apply(lambda x:clean_text(x))
-    # test_df = pd.read_csv("../input/test.csv")
-    # test_df['selected_text'] = 'temp'
-
-    # trn_df = trn_df[trn_df['sentiment']=='positive']
 
     dataset = TweetDataset(trn_df['text'].values, 
                     trn_df['selected_text'].values, 
                     trn_df['sentiment'].values, 
                     config.TOKENIZER, 
                     config.MAX_LEN,
-                    config.MODEL_TYPE
+                    config.MODEL_VERSION
                 )            
     
     for i in range(len(trn_df)):

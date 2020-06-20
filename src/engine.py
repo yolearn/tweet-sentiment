@@ -2,12 +2,10 @@ import torch.nn as nn
 import torch
 import numpy as np
 import string
-from utils import jaccard, AverageMeter, cal_jaccard, load_model, cal_accucary
+from utils import jaccard, AverageMeter, cal_jaccard, cal_accucary, load_model
 from tqdm import tqdm
 import time
 from scipy.special import softmax
-
-
 
 def KSLoss(preds, target):
     pred_cdf = torch.cumsum(torch.softmax(preds, dim=1), dim=1)
@@ -31,21 +29,12 @@ def EntropyLoss(o1, o2, t1, t2):
 
 def BcwLoss(o1, o2, t1, t2):
     bcw = nn.BCEWithLogitsLoss()
-    # temp1 = torch.zeros(t1.size(0), 128).to('cuda', dtype=torch.float)
-    # temp2 = torch.zeros(t1.size(0), 128).to('cuda', dtype=torch.float)
-    
-    # for i in range(t1.size(0)):
-    #     temp1[i, t1[i]] = 1
-    #     temp2[i, t2[i]] = 1
-
     l1 = bcw(o1, t1)
     l2 = bcw(o2, t2)
-
     return l1 + l2
 
 def loss_fn(*loss):
     return sum(loss)
-
 
 def trn_loop_fn(data_loader, model, optimzer, device):
     model.train()
@@ -81,7 +70,6 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         loss.backward()
         optimzer.step()
         losses.update(loss.item(), ids.size(0))
-        #scheduler.step(losses.avg)
         tk.set_postfix(loss=losses.avg)
     
 def eval_loop_fn(data_loader, model,  device, df_type, rm_length):
@@ -117,11 +105,8 @@ def eval_loop_fn(data_loader, model,  device, df_type, rm_length):
             targ_sentiment = targ_sentiment.to(device, dtype=torch.long)
 
             o1, o2 = model(ids, mask_ids, token_type_ids)
-            # fin_output_start.append(torch.softmax(o1, axis=1).cpu().detach().numpy())
-            # fin_output_end.append(torch.softmax(o2, axis=1).cpu().detach().numpy())
             fin_output_start.append(o1.cpu().detach().numpy())
             fin_output_end.append(o2.cpu().detach().numpy())
-            #fin_output_sentiment.append(torch.softmax(o3, axis=1).cpu().detach().numpy())
 
             fin_offset.append(offsets)
             fin_orig_sentiment.extend(orig_sentiment)
@@ -132,19 +117,14 @@ def eval_loop_fn(data_loader, model,  device, df_type, rm_length):
     fin_output_start = np.vstack(fin_output_start)
     fin_output_end = np.vstack(fin_output_end)
     fin_offset = np.vstack(fin_offset)
-    #fin_output_sentiment = np.vstack(fin_output_sentiment)
     fin_targ_sentiment = np.concatenate(fin_targ_sentiment)
-    
-
-    #(fin_output_sentiment, fin_targ_sentiment)
 
     if df_type == 'val' or df_type == 'trn':
         jaccard_score = cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment, fin_orig_selected, fin_orig_text, rm_length)
         return jaccard_score, fin_output_start, fin_output_end
 
 
-def pred_loop_fn(data_loader, device):
-    
+def pred_loop_fn(data_loader, device, file_path):
     fin_output_start = []
     fin_output_end = []
     fin_offset = []
@@ -168,7 +148,7 @@ def pred_loop_fn(data_loader, device):
             mask_ids = mask_ids.to(device, dtype=torch.long)
             token_type_ids = token_type_ids.to(device, dtype=torch.long)
             
-            model1, model2, model3, model4, model5 = load_model()
+            model1, model2, model3, model4, model5 = load_model(file_path)
             output_start1, output_end1 = model1(ids, mask_ids, token_type_ids)
             output_start2, output_end2 = model2(ids, mask_ids, token_type_ids)
             output_start3, output_end3 = model3(ids, mask_ids, token_type_ids)
@@ -206,8 +186,8 @@ def pred_loop_fn(data_loader, device):
         output_string = ""
         for j in range(output_start, output_end+1):
             output_string += orig_text[offset[j][0]:offset[j][1]]
-            #if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
-            #    final_output += " "
+            if (ix+1) < len(offset) and offset[ix][1] < offset[ix+1][0]:
+               final_output += " "
 
         if orig_sentiment == 'neutral':
             output_string = orig_text

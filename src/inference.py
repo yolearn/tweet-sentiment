@@ -11,23 +11,6 @@ import config
 from scipy.special import softmax
 from engine import pred_loop_fn
 
-def load_model():
-    model1 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model1.load_state_dict(torch.load('../model/model_fold1.pth'))
-
-    model2 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model2.load_state_dict(torch.load('../model/model_fold2.pth'))
-
-    model3 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model3.load_state_dict(torch.load('../model/model_fold3.pth'))
-
-    model4 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model4.load_state_dict(torch.load('../model/model_fold4.pth'))
-
-    model5 = RobertUncaseQa(config.MODEL_PATH).to(config.DEVICE)
-    model5.load_state_dict(torch.load('../model/model_fold5.pth'))
-
-    return model1, model2, model3, model4, model5
 
 def predict(df):
     test_dataset = TweetDataset(
@@ -36,7 +19,7 @@ def predict(df):
         sentiment=df['sentiment'].values,
         tokenizer=config.TOKENIZER,
         max_len=config.MAX_LEN,
-        model_type=config.MODEL_TYPE
+        model_type=config.MODEL_VERSION
     )
 
     test_data_loader = torch.utils.data.DataLoader(
@@ -44,10 +27,11 @@ def predict(df):
         batch_size = config.BATCH_SIZE
     ) 
 
-    preds = pred_loop_fn(test_data_loader, config.DEVICE)
+    preds = pred_loop_fn(test_data_loader, config.DEVICE, FILE_PATH)
     return preds
 
 if __name__ == '__main__':
+    FILE_PATH = "0614_1"
 
     test_df = pd.read_csv("../input/test.csv")
     test_df.loc[:, "selected_text"] = test_df.loc[:, 'text']
