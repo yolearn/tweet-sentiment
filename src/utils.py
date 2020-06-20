@@ -113,7 +113,7 @@ class EarlyStopping():
             torch.save(self.model.state_dict(), self.path)
     
 
-def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment, fin_orig_selected, fin_orig_text):
+def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment, fin_orig_selected, fin_orig_text, rm_length):
     """
     calculate jaccard
     :fin_output_start -> (batch_size, max_len)
@@ -142,13 +142,10 @@ def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment
             output_string += orig_text[offset[j][0]:offset[j][1]]
             if (j+1) < len(offset) and offset[j][1] < offset[j+1][0]:
                output_string += " "
-
-        if len(orig_text.split()) < 4:
-            output_string = orig_text
         
         #output_string = post_process(output_string)
         output_string = output_string.strip()
-        if orig_sentiment == 'neutral':
+        if orig_sentiment == 'neutral' or len(orig_text.split()) < rm_length:
             output_string = orig_text
             neu_score.append(jaccard(output_string, orig_selected))
 
@@ -166,8 +163,8 @@ def cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment
     return {
         'avg_score' : (sum(neu_score) + sum(pos_score) + sum(neg_score)) / (len(neu_score) + len(pos_score) + len(neg_score)),
         'neu_score' : sum(neu_score) / len(neu_score) if len(neu_score)!=0 else None,
-        'pos_score' : sum(pos_score) / len(pos_score) if len(neu_score)!=0 else None,
-        'neg_score' : sum(neg_score) / len(neg_score if len(neu_score)!=0 else None)
+        'pos_score' : sum(pos_score) / len(pos_score) if len(pos_score)!=0 else None,
+        'neg_score' : sum(neg_score) / len(neg_score) if len(neg_score)!=0 else None
     }
 
 def str2bool(v):
@@ -198,8 +195,7 @@ class SentencePieceTokenizer:
 
 def cal_accucary(fin_output_sentiment, fin_targ_sentiment):
     correct = 0
-    print(fin_output_sentiment)
-    print(fin_targ_sentiment)
+
     fin_output_sentiment = np.argmax(fin_output_sentiment, axis=1)
     for i in range(len(fin_output_sentiment)):
         if fin_output_sentiment[i] == fin_targ_sentiment[i]:
@@ -221,11 +217,14 @@ def clean_text(text):
     return text
 
 
-def pre_process(df):
+def pre_process(df, length=4):
     #print(df.head())
     # df['text'] = df['text'].apply(lambda x:clean_text(x))
     # df['selected_text'] = df['selected_text'].apply(lambda x:clean_text(x))
+    print(f'Removing length < {length} ....')
     df = df[df['sentiment'] != 'neutral']
+    df['text_len'] = df['text'].apply(lambda x : len(x.split()))
+    df = df[df['text_len'] > length-1]
 
     return df
     
@@ -282,11 +281,12 @@ def load_model():
 if __name__ == '__main__':
     IF_UPLOAD = True
     IF_DOWNLOAD = False
+    FILE = '0614_1'
     #upload model
     if IF_UPLOAD:
-        for file_name in os.listdir("../model"):
-            local_file = os.path.join("../model", file_name)
-            upload_to_aws(local_file, config.BUCKET_NAME, file_name)
+        for file_name in os.listdir(f"../model/{FILE}"):
+            local_file = os.path.join(f"../model/{FILE}", file_name)
+            upload_to_aws(local_file, config.BUCKET_NAME, f"{FILE}/{file_name}")
 
     #download model 
     if IF_DOWNLOAD:

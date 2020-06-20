@@ -6,6 +6,8 @@ import torch
 from dataload import TweetDataset
 from sklearn import model_selection
 from model import BertUncasedQa, RobertUncaseQa, AlbertQa
+from model_gcnn import RobertUncaseQa
+#from model_linear import RobertUncaseQa
 from transformers import AdamW
 import os
 
@@ -45,7 +47,7 @@ def run(cv):
         trn_df = df.iloc[trn_idx]
         if args['PRE_CLEAN']:
             print('cleaning......')
-            trn_df = pre_process(trn_df)
+            trn_df = pre_process(trn_df, args['REMOVE_LENGTH'])
         
         val_df = df.iloc[val_idx]
         MODEL_PATH = f'{args["DIR"]}/input/{args["MODEL_VERSION"]}/'
@@ -70,16 +72,28 @@ def run(cv):
                         )
             MODEL_CONF = transformers.RobertaConfig.from_pretrained(MODEL_CONF)
             MODEL_CONF.output_hidden_states = True
-            model = RobertUncaseQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], 2, args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_WIDTH'], args['DROPOUT_RATE']).to(args['DEVICE'])
+            model = RobertUncaseQa(
+                        robert_path=MODEL_PATH, 
+                        conf=MODEL_CONF, 
+                        embedding_size=args['EMBEDDING_SIZE'], 
+                        cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
+                        kernel_width=args['CNN_KERNEL_WIDTH'], 
+                        dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
+                    )
         
         elif args['MODEL_VERSION'] in ['albert-base-v2']:
-            MODEL_PATH = 'albert-base-v2'
             TOKENIZER = SentencePieceTokenizer(f'{args["DIR"]}/input/spiece.model')
             
             MODEL_CONF = transformers.AlbertConfig.from_pretrained(MODEL_CONF)
             MODEL_CONF.output_hidden_states = True
-            model = AlbertQa(MODEL_PATH, MODEL_CONF, args['EMBEDDING_SIZE'], 2, args['CNN_OUTPUT_CHANNEL'], args['CNN_KERNEL_SZIE'], args['DROPOUT_RATE']).to(args['DEVICE'])
-                    
+            model = AlbertQa(
+                        robert_path=MODEL_PATH, 
+                        conf=MODEL_CONF, 
+                        embedding_size=args['EMBEDDING_SIZE'], 
+                        cnn_output_channel=args['CNN_OUTPUT_CHANNEL'],
+                        kernel_width=args['CNN_KERNEL_WIDTH'], 
+                        dropout_rate=args['DROPOUT_RATE']).to(args['DEVICE']
+                    )  
         
         trn_dataset = TweetDataset(
             text=trn_df['text'].values,
@@ -115,19 +129,19 @@ def run(cv):
         
         model = nn.DataParallel(model)
         optimizer = AdamW(model.parameters(), lr=args['LR'])
-        #scheduler = ReduceLROnPlateau(optimizer, 'min')
+        #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max')
 
         for i in range(args['EPOCH']):       
             trn_loop_fn(trn_data_loader, model, optimizer, args['DEVICE'])
             #cur_score = eval_loop_fn(trn_data_loader, model, config.DEVICE)
             #print(f"Train {i+1} EPOCH : JACCARDS = {cur_score}")
-            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, args['DEVICE'], 'val')
+            cur_score, pred1, pred2 = eval_loop_fn(val_data_loader, model, args['DEVICE'], 'val', args['REMOVE_LENGTH'])
             print(f"Train {i+1} EPOCH : AVG JACCARDS      = {cur_score['avg_score']}")
             #print(f"Train {i+1} EPOCH : AVG ACCURACY      = {accuracy}")
             print(f"Train {i+1} EPOCH : NEUTRAL JACCARDS  = {cur_score['neu_score']}")
             print(f"Train {i+1} EPOCH : POSITIVE ACCARDS  = {cur_score['pos_score']}")
             print(f"Train {i+1} EPOCH : NEGATIVE JACCARDS = {cur_score['neg_score']}")
-            
+        
 
             earlystop(cur_score['avg_score'], model, i+1, pred1, pred2)
             if earlystop.earlystop:
@@ -175,6 +189,8 @@ if __name__ == '__main__':
     parser.add_argument('--LR', default=3e-5, type=int)
     parser.add_argument('--PATIENCE', default=1, type=int)
     parser.add_argument('--DROPOUT_RATE', default=0.1, type=int)
+    parser.add_argument('--REMOVE_LENGTH', default=4, type=int)
+
 
     args = parser.parse_args()
     args = dict(vars(args))

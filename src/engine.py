@@ -74,8 +74,8 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         optimzer.zero_grad()
         o1, o2 = model(ids, mask_ids, token_type_ids)
         
-        loss = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
-        #loss2 = BcwLoss(o1, o2, target_start_idx, target_end_idx)
+        #loss = EntropyLoss(o1, o2, target_start_idx, target_end_idx)
+        loss = BcwLoss(o1, o2, target_start_idx, target_end_idx)
         #loss = loss_fn(loss1, loss2)
 
         loss.backward()
@@ -84,7 +84,7 @@ def trn_loop_fn(data_loader, model, optimzer, device):
         #scheduler.step(losses.avg)
         tk.set_postfix(loss=losses.avg)
     
-def eval_loop_fn(data_loader, model, device, df_type):
+def eval_loop_fn(data_loader, model,  device, df_type, rm_length):
     model.eval()
 
     fin_output_start = []
@@ -139,7 +139,7 @@ def eval_loop_fn(data_loader, model, device, df_type):
     #(fin_output_sentiment, fin_targ_sentiment)
 
     if df_type == 'val' or df_type == 'trn':
-        jaccard_score = cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment, fin_orig_selected, fin_orig_text)
+        jaccard_score = cal_jaccard(fin_output_start, fin_output_end, fin_offset, fin_orig_sentiment, fin_orig_selected, fin_orig_text, rm_length)
         return jaccard_score, fin_output_start, fin_output_end
 
 

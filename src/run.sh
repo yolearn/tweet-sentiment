@@ -1,10 +1,11 @@
 #roberta squad
 CUDA_VISIBLE_DEVICES=1 python3 train.py \
-    --MODEL_VERSION roberta-base \
-    --MODEL_NAME exper \
-    --SPLIT_TYPE pure_split \
-    --EPOCH 3 \
-    --BATCH_SIZE 16 \
+    --MODEL_VERSION roberta-base-squad2 \
+    --MODEL_NAME 0614_1 \
+    --BATCH_SIZE 32 \
+    --MAX_LEN 95 \
+    --EPOCH 2
+
 
 
 # parser.add_argument('--EMBEDDING_SIZE', default=768, type=int)
