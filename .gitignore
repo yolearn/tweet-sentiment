@@ -129,7 +129,6 @@ dmypy.json
 
 # file
 *.csv
-*.txt
 *.cfg
 
 #folder
