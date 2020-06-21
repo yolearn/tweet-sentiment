@@ -1,0 +1,28 @@
+#roberta-base-squad2 baseline
+cv score :  [0.7004180132850901, 0.6929832688934651, 0.6980810524418385, 0.6993074102526392, 0.7155036990144987] 
+average cv score :  0.7012586887775063
+
+#roberta-base baseline
+cv score :  [0.7038672281607704, 0.6973076012232602, 0.6913058090970221, 0.6983368794809364, 0.7109551508350811]
+average cv score : 0.700354533759414
+ 
+#bert-base baseline
+cv score :  [0.6423774636681762, 0.6406282989793624, 0.6351196292834592, 0.6387710375006019, 0.6473396701162375] 
+average cv score :  0.6408472199095675
+
+
+
+#one split
+roberta-base CNN cross-entropy : 0.6996478052412994
+roberta-base CNN binary-entropy : 0.6996627077969972
+
+
+roberta-base DNN(1 layer) cross-entropy : 0.69480064001694
+roberta-base DNN(1 layer) binary-entropy : 0.7053269734337437
+roberta-base DNN(1 layer) both-loss : 0.7027980836859284
+roberta-large DNN(1 layer) binary-entropy : 0.7053269734337437
+albert-base-v2 DNN(1 layer) binary-entropy : 0.6871762706794848
+
+roberta-base DNN(3 layer) cross-entropy : 0.7004729850055744
+roberta-base DNN(3 layer) binary-entropy : 0.7053328095093322
+roberta-base DNN(3 layer) both-loss : 0.6956376365884178
