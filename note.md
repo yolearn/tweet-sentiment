@@ -1,8 +1,8 @@
 # 1st solution
-- [MSD (Multi Sample Dropout](#MSD)
+- [MSD (Multi Sample Dropout)](#MSD)
 - [Linear warmup schedule](#Linear)
 - [Concat Avg / Max of last n-1 layer (withoutembedding layer)](#Concat)
-- [Custom loss (Jaccard-based Soft Labels)](#Custom)
+- [Custom loss (Jaccard-based Soft Labels)](#Custom-loss)
 - [Pre-training on squad2.0](#Pre-training)
 
 
@@ -17,6 +17,6 @@
 
 ## Concat
 
-## Custom
+## Custom loss
 
-## Pre-training 
+## Pre training 
