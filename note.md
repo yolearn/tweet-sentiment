@@ -3,7 +3,7 @@
 - [Linear warmup schedule](#Linear-warmup-schedule)
 - [Concat Avg / Max of last n-1 layer (withoutembedding layer)](#Concat-Avg/Max-of-last-n-1-layer-(withoutembedding-layer))
 - [Custom loss (Jaccard-based Soft Labels)](#Custom-loss)
-- [Pre-training on squad2.0](#Pre-training-on-squad-2.0)
+- [Pre-training on squad2.0](#Pre-training-on-squad)
 
 
 # New learning
@@ -17,6 +17,6 @@
 
 ## Concat Avg/Max of last n-1 layer (withoutembedding layer)
 
-## Custom loss (Jaccard-based Soft Labels)
+## Custom loss
 
-## Pre training on squad 2.0
+## Pre training on squad
