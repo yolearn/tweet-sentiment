@@ -1,6 +1,7 @@
 import pandas as pd
-from config import *
+#from config import *
 import string
+import time
 
 if __name__ == "__main__":
     df = pd.read_csv('../input/train.csv')
