@@ -15,7 +15,7 @@
 [Reference Paper](https://arxiv.org/pdf/1905.09788.pdf)  
 ## Linear warmup schedule
 
-## Concat Avg/Max of last (without embedding layer)
+## Concat Avg/Max of last(without embedding layer)
 
 ## Custom loss(Jaccard-based Soft Labels)
 
